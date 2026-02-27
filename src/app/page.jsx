@@ -26,7 +26,11 @@ const CheckIcon = ({ size = 24, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 6 9 17l-5-5"/></svg>
 );
 
-// --- ZERO-API PROCEDURAL LOGIC (Optimized) ---
+const ArrowRightIcon = ({ size = 24, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+);
+
+// --- ZERO-API PROCEDURAL LOGIC (Optimized for SEO/Demo) ---
 const shuffle = (array) => [...array].sort(() => Math.random() - 0.5);
 
 const generateDemoMath = (year = 5) => {
@@ -75,10 +79,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-indigo-100 font-sans">
-      {/* --- ACCESSIBILITY SKIP LINK --- */}
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:p-4 focus:bg-white focus:z-[200]">Skip to content</a>
+      {/* --- SEO METADATA (Hidden for UI, used by crawlers) --- */}
+      <h2 className="sr-only">Quest Academy: The Intelligent 11+ Learning Platform</h2>
 
-      {/* --- NAVIGATION --- */}
       <nav className="fixed top-0 w-full z-[100] bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <header className="flex items-center gap-3">
@@ -97,18 +100,17 @@ export default function LandingPage() {
       </nav>
 
       <main id="main-content">
-        {/* --- HERO SECTION --- */}
         <section className="pt-40 pb-20 px-6 overflow-hidden">
           <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
             <article>
               <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full font-black text-sm mb-6 uppercase tracking-wider">
-                <ZapIcon size={16} /> 2026 11+ Mastery Platform
+                <ZapIcon size={16} /> 2026 UK 11+ Master Platform
               </div>
               <h1 className="text-6xl md:text-8xl font-black tracking-tight leading-[0.9] mb-8 text-slate-900">
-                Unlock your child's <span className="text-indigo-600">Full Potential.</span>
+                Building <span className="text-indigo-600">Scholars,</span><br /> Not just test-takers.
               </h1>
               <p className="text-xl text-slate-500 font-bold mb-10 max-w-xl leading-relaxed">
-                Quest Academy blends advanced AI tutoring with infinite practice to master GL, CEM, and CSSE exams. Join 10,000+ scholars in the meadowlands.
+                Quest Academy adapts to your child's level from Year 1 to Year 6. Master GL, CEM, and CSSE with Sage, our unique AI tutor.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 font-black">
                 <a href="/student" className="bg-indigo-600 text-white text-xl px-10 py-6 rounded-3xl shadow-2xl shadow-indigo-200 hover:bg-indigo-700 transition-all text-center">
@@ -118,15 +120,8 @@ export default function LandingPage() {
                   Try Live Demo
                 </a>
               </div>
-              <div className="mt-12 flex items-center gap-4 text-slate-400 font-bold">
-                <div className="flex -space-x-3">
-                  {[1,2,3,4].map(i => <div key={i} className="w-10 h-10 rounded-full border-4 border-white bg-slate-200" />)}
-                </div>
-                <span className="text-sm">Trusted by 2,000+ UK Families</span>
-              </div>
             </article>
 
-            {/* --- VISUAL ELEMENT --- */}
             <div className="relative hidden lg:block">
               <div className="absolute inset-0 bg-indigo-500/10 blur-[120px] rounded-full" />
               <div className="relative bg-white border-[16px] border-slate-100 rounded-[64px] p-8 shadow-2xl rotate-2">
@@ -146,49 +141,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* --- TRUST BAR --- */}
-        <section className="py-12 border-y border-slate-100 bg-slate-50/50">
-           <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center md:justify-between items-center gap-8 opacity-40 grayscale font-black text-xl">
-              <span>GL ASSESSMENT</span>
-              <span>CEM SELECT</span>
-              <span>CSSE ESSEX</span>
-              <span>ISEB COMMON</span>
-              <span>SEAG NI</span>
-           </div>
-        </section>
-
-        {/* --- FEATURES GRID --- */}
-        <section id="how-it-works" className="py-24 px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-20">
-              <h2 className="text-4xl md:text-6xl font-black mb-4">Why Quest Academy?</h2>
-              <p className="text-xl text-slate-500 font-bold">Traditional tutoring is finite. We are infinite.</p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-               {[
-                 { title: "Sage AI Feedback", desc: "Our 'Explain it Back' tech identifies logic errors, not just wrong answers.", icon: <BrainIcon size={32}/>, color: "bg-indigo-600" },
-                 { title: "Infinite Engine", desc: "Zero repetitive questions. Our procedural logic generates new tasks every time.", icon: <ZapIcon size={32}/>, color: "bg-amber-500" },
-                 { title: "Secure Vault™", desc: "Server-side grading prevents cheating and ensures progress is 100% verified.", icon: <ShieldCheckIcon size={32}/>, color: "bg-emerald-600" }
-               ].map((f, i) => (
-                 <article key={i} className="p-10 rounded-[48px] bg-slate-50 hover:bg-white border-2 border-transparent hover:border-indigo-100 transition-all group">
-                    <div className={`${f.color} text-white w-16 h-16 rounded-2xl flex items-center justify-center mb-8 shadow-xl group-hover:scale-110 transition-transform`}>
-                      {f.icon}
-                    </div>
-                    <h3 className="text-2xl font-black mb-4">{f.title}</h3>
-                    <p className="text-slate-500 font-bold leading-relaxed">{f.desc}</p>
-                 </article>
-               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* --- INTERACTIVE DEMO (API OPTIMIZED) --- */}
         <section id="demo" className="py-24 px-6 bg-slate-900 text-white rounded-[80px] mx-4 md:mx-10 my-20">
            <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">
-                 <h2 className="text-3xl md:text-5xl font-black mb-4 italic">Experience the Infinite Engine</h2>
-                 <p className="text-indigo-300 font-bold italic">Try a real scholar's quest task. No account required.</p>
+                 <h2 className="text-3xl md:text-5xl font-black mb-4 italic">The Infinite Engine</h2>
+                 <p className="text-indigo-300 font-bold italic">Zero repetitive questions. Infinite growth.</p>
               </div>
 
               <div className="bg-white rounded-[48px] p-8 md:p-16 text-slate-900 shadow-2xl relative">
@@ -222,53 +179,48 @@ export default function LandingPage() {
            </div>
         </section>
 
-        {/* --- PRICING / GATED ACCESS PREP --- */}
         <section id="pricing" className="py-24 px-6 text-center">
            <div className="max-w-7xl mx-auto">
               <h2 className="text-4xl md:text-6xl font-black mb-12">Choose Your Path</h2>
               <div className="grid md:grid-cols-2 max-w-4xl mx-auto gap-8">
-                 {/* FREE TIER */}
                  <div className="p-10 rounded-[48px] border-4 border-slate-100 bg-white text-left">
                     <h3 className="text-2xl font-black mb-2">Free Adventurer</h3>
                     <div className="text-4xl font-black mb-6">£0 <span className="text-sm text-slate-400">/mo</span></div>
                     <ul className="space-y-4 mb-10 font-bold text-slate-500">
-                       <li className="flex items-center gap-2"><CheckIcon size={18} className="text-emerald-500" /> Basic Maths & VR</li>
+                       <li className="flex items-center gap-2"><CheckIcon size={18} className="text-emerald-500" /> Adaptive Maths & VR</li>
                        <li className="flex items-center gap-2"><CheckIcon size={18} className="text-emerald-500" /> Local Progress Tracking</li>
                        <li className="flex items-center gap-2 opacity-30"><CheckIcon size={18} /> No AI Feedback</li>
                     </ul>
                     <a href="/student" className="block w-full text-center py-5 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 transition-colors">Get Started</a>
                  </div>
 
-                 {/* PAID TIER (FUTURE GATEWAY) */}
-                 <div className="p-10 rounded-[48px] border-4 border-indigo-600 bg-indigo-50 text-left relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-indigo-600 text-white px-6 py-2 rounded-bl-2xl font-black text-xs">RECOMMENDED</div>
+                 <div className="p-10 rounded-[48px] border-4 border-indigo-600 bg-indigo-50 text-left relative overflow-hidden shadow-2xl shadow-indigo-100">
+                    <div className="absolute top-0 right-0 bg-indigo-600 text-white px-6 py-2 rounded-bl-2xl font-black text-xs">BEST FOR 11+ PREP</div>
                     <h3 className="text-2xl font-black mb-2">Scholar Pro</h3>
                     <div className="text-4xl font-black mb-6">£14 <span className="text-sm text-slate-400">/mo</span></div>
                     <ul className="space-y-4 mb-10 font-bold text-slate-700">
-                       <li className="flex items-center gap-2"><CheckIcon size={18} className="text-indigo-600" /> All Subjects (Inc. NVR)</li>
-                       <li className="flex items-center gap-2"><CheckIcon size={18} className="text-indigo-600" /> Sage AI "Explain it Back"</li>
-                       <li className="flex items-center gap-2"><CheckIcon size={18} className="text-indigo-600" /> Server Vault Cloud Backup</li>
+                       <li className="flex items-center gap-2"><CheckIcon size={18} className="text-indigo-600" /> All Subjects (GL/CEM/CSSE)</li>
+                       <li className="flex items-center gap-2"><CheckIcon size={18} className="text-indigo-600" /> Sage AI Logic Coaching</li>
+                       <li className="flex items-center gap-2"><CheckIcon size={18} className="text-indigo-600" /> Secure Cloud Vault Storage</li>
                     </ul>
-                    <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 shadow-xl transition-all">Join Pro (Coming Soon)</button>
+                    <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 shadow-xl transition-all">Join the Elite</button>
                  </div>
               </div>
            </div>
         </section>
       </main>
 
-      {/* --- FOOTER --- */}
       <footer className="py-20 border-t border-slate-100">
          <div className="max-w-7xl mx-auto px-6 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-10">
             <div>
                <div className="text-2xl font-black mb-2">Quest Academy</div>
-               <p className="text-slate-400 font-bold max-w-xs">Building scholars through the power of infinite practice and AI wisdom.</p>
+               <p className="text-slate-400 font-bold max-w-xs italic tracking-tight">Building scholars for the next generation.</p>
             </div>
             <div className="flex gap-10 font-bold text-slate-400">
                <a href="#" className="hover:text-indigo-600">Privacy</a>
                <a href="#" className="hover:text-indigo-600">Terms</a>
                <a href="#" className="hover:text-indigo-600">FAQ</a>
             </div>
-            <p className="text-slate-300 font-bold text-sm italic">© 2026 Quest Academy Learning Platforms. Secured by Vault-Sync.</p>
          </div>
       </footer>
     </div>
