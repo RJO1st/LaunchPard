@@ -1,8 +1,7 @@
-"use client";
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import {
-  ArrowRightIcon, TrophyIcon, BookIcon, StarIcon,
+import { supabase } from "../../lib/supabase";
+import { BrainIcon, TrophyIcon, ZapIcon, ShieldCheckIcon /* any other icons */ } from "../../components/ui/Icons";
+import { generateSessionQuestions } from "../../lib/proceduralEngine";
+// Note the "../../" instead of "../"
   CalculatorIcon, SpeechIcon, ShapesIcon, ShieldCheckIcon, BrainIcon
 } from "../../components/ui/Icons";
 import QuizEngine from "../../components/game/QuizEngine";
