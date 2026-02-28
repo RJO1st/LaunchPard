@@ -7,20 +7,38 @@ const shuffle = (array) => [...array].sort(() => Math.random() - 0.5);
 const processTemplateString = (str, vars) => {
   if (!str) return str;
   return String(str).replace(/\{([^}]+)\}/g, (match, expr) => {
+    let evaluated = expr.trim();
+    
+    // 1. Replace variables with their literal values securely
+    for (const [key, value] of Object.entries(vars)) {
+      const regex = new RegExp(`\\b${key}\\b`, 'g');
+      evaluated = evaluated.replace(regex, value);
+    }
+
+    // 2. If it contains letters now, it's either text or unresolvable
+    if (/[a-zA-Z]/.test(evaluated)) {
+        return evaluated; 
+    }
+
+    // 3. Evaluate the math safely to handle {s*s+2} or {ans+10}
     try {
-      // If it's a known string word (like 'adj' or 'noun')
-      if (vars[expr] !== undefined && typeof vars[expr] === 'string') {
-        return vars[expr];
-      }
-      // Otherwise, securely evaluate it as a mathematical expression (like s*s)
-      const func = new Function(...Object.keys(vars), `return ${expr};`);
-      const result = func(...Object.values(vars));
-      
-      // Return the result rounded cleanly to 2 decimals if it's a messy fraction
-      return Number.isFinite(result) ? Math.round(result * 100) / 100 : result;
+        const result = new Function(`return ${evaluated};`)();
+        return Number.isFinite(result) ? Math.round(result * 100) / 100 : result;
     } catch (e) {
-      // If evaluation fails, just return the raw string to prevent a crash
-      return match;
+        // Safe fallback for basic A OP B in strict environments
+        try {
+           const parts = evaluated.match(/(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)/);
+           if (parts) {
+               const n1 = parseFloat(parts[1]);
+               const op = parts[2];
+               const n2 = parseFloat(parts[3]);
+               if (op === '+') return n1 + n2;
+               if (op === '-') return n1 - n2;
+               if (op === '*') return n1 * n2;
+               if (op === '/') return Math.round((n1 / n2) * 100) / 100;
+           }
+        } catch (fallbackErr) {}
+        return evaluated;
     }
   });
 };
@@ -32,34 +50,39 @@ const ADVERBS = ["loudly", "gracefully", "slowly", "bravely", "violently", "firm
 
 export const generateLocalMaths = (year) => {
   const op = Math.random();
-  let q, ans, exp;
+  let q, ans, exp, visual;
   const maxNum = year * 25; 
   
+  let a, b;
   if (op < 0.25) {
-    const a = Math.floor(Math.random() * maxNum) + (year * 5);
-    const b = Math.floor(Math.random() * maxNum) + 1;
+    a = Math.floor(Math.random() * maxNum) + (year * 5);
+    b = Math.floor(Math.random() * maxNum) + 1;
     ans = a + b;
     q = `Calculate: ${a} + ${b}`;
     exp = `Add the units, then the tens. ${a} + ${b} = ${ans}.`;
+    if (year <= 2 && ans <= 20) visual = `${Array(a).fill("🍎").join("")} + ${Array(b).fill("🍏").join("")}`;
   } else if (op < 0.5) {
-    const a = Math.floor(Math.random() * maxNum) + 30;
-    const b = Math.floor(Math.random() * a) + 1;
+    a = Math.floor(Math.random() * maxNum) + 30;
+    b = Math.floor(Math.random() * a) + 1;
     ans = a - b;
     q = `Calculate: ${a} - ${b}`;
     exp = `Subtract ${b} from ${a} to get ${ans}.`;
+    if (year <= 2 && a <= 20) visual = `${Array(a).fill("🍎").join("")} (take away ${b})`;
   } else if (op < 0.75) {
-    const a = Math.floor(Math.random() * (year + 8)) + 2;
-    const b = Math.floor(Math.random() * 12) + 2;
+    a = Math.floor(Math.random() * (year + 8)) + 2;
+    b = Math.floor(Math.random() * 12) + 2;
     ans = a * b;
     q = `What is ${a} × ${b}?`;
     exp = `${a} groups of ${b} equals ${ans}.`;
+    if (year <= 2 && ans <= 20) visual = Array(ans).fill("⭐").join(" ");
   } else {
-    const b = Math.floor(Math.random() * (year + 6)) + 2;
+    b = Math.floor(Math.random() * (year + 6)) + 2;
     const ansTemp = Math.floor(Math.random() * 12) + 2;
-    const a = b * ansTemp;
+    a = b * ansTemp;
     ans = ansTemp;
     q = `Divide ${a} by ${b}`;
     exp = `Since ${b} × ${ans} = ${a}, ${a} ÷ ${b} = ${ans}.`;
+    if (year <= 2 && a <= 20) visual = Array(a).fill("💎").join(" ");
   }
 
   const wrong1 = ans + Math.floor(Math.random() * 5) + 1;
@@ -67,7 +90,7 @@ export const generateLocalMaths = (year) => {
   const wrong3 = ans + 10;
   
   const opts = shuffle([String(ans), String(wrong1), String(wrong2), String(wrong3)]);
-  return { q, opts, a: opts.indexOf(String(ans)), exp, subject: 'maths' };
+  return { q, opts, a: opts.indexOf(String(ans)), exp, subject: 'maths', visual };
 };
 
 export const generateLocalEnglish = (year) => {
@@ -266,9 +289,13 @@ export const generateSessionQuestions = async (year, region, count, proficiency,
             }
 
             // Generate fresh random math values and words based on the student's year level
+            const baseA = Math.floor(Math.random() * (year * 10)) + 5;
+            const baseB = Math.floor(Math.random() * (year * 10)) + 2;
             const vars = {
-              a: Math.floor(Math.random() * (year * 10)) + 2,
-              b: Math.floor(Math.random() * (year * 10)) + 2,
+              a: baseA,
+              b: baseB,
+              largeNum: Math.max(baseA, baseB),
+              smallNum: Math.min(baseA, baseB),
               c: Math.floor(Math.random() * (year * 5)) + 1,
               s: Math.floor(Math.random() * (year * 4)) + 3, // Safe side length (e.g. 3cm to 27cm)
               x: Math.floor(Math.random() * (year * 8)) + 2,
@@ -279,9 +306,41 @@ export const generateSessionQuestions = async (year, region, count, proficiency,
               adv: ADVERBS[Math.floor(Math.random() * ADVERBS.length)]
             };
 
+            let processedQ = processTemplateString(row.question_text, vars);
+            
+            // Auto-detect the answer for basic equations to feed the {ans} variable
+            let detectedAns = vars.a + vars.b; 
+            const mathMatch = processedQ.match(/(\d+(?:\.\d+)?)\s*([\+\-\*\/÷xX])\s*(\d+(?:\.\d+)?)/);
+            if (mathMatch) {
+              const num1 = parseFloat(mathMatch[1]);
+              const op = mathMatch[2].toLowerCase();
+              const num2 = parseFloat(mathMatch[3]);
+              if (op === '+') detectedAns = num1 + num2;
+              if (op === '-') detectedAns = num1 - num2;
+              if (op === '*' || op === 'x') detectedAns = num1 * num2;
+              if (op === '/' || op === '÷') detectedAns = num1 / num2;
+            }
+            
+            // Expose {ans} securely back to the template parser
+            vars.ans = Number.isFinite(detectedAns) ? Math.round(detectedAns * 100) / 100 : detectedAns;
+
+            // Create a counting visual for Year 1 and 2 scholars
+            let visual = null;
+            if (year <= 2 && s === 'maths' && mathMatch) {
+                const num1 = parseInt(mathMatch[1]);
+                const op = mathMatch[2];
+                const num2 = parseInt(mathMatch[3]);
+                if (op === '+' && num1 + num2 <= 20) {
+                    visual = `${Array(num1).fill("🔴").join("")} + ${Array(num2).fill("🔵").join("")}`;
+                } else if (op === '-' && num1 <= 20) {
+                    visual = `${Array(num1).fill("🔴").join("")} (take away ${num2})`;
+                }
+            }
+
             // Evaluate all placeholders in the strings dynamically
             return {
-              q: processTemplateString(row.question_text, vars),
+              q: processedQ,
+              visual: visual,
               opts: parsedOpts.map(opt => String(processTemplateString(opt, vars))),
               a: parseInt(row.correct_index) || 0,
               exp: processTemplateString(row.explanation, vars) || "Correct answer based on the curriculum.",
