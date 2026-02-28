@@ -141,10 +141,93 @@ const generateLocalMaths = (year = 4, difficultyMultiplier = 1) => {
   return { q, opts, a: opts.indexOf(String(ans)), exp, subject: 'maths', visual, vars: { a, b }, topic };
 };
 
+const generateLocalEnglish = (year = 4) => {
+  const types = [
+    {
+      q: "Identify the VERB in this sentence: The brave knight fought bravely.",
+      opts: ["brave", "knight", "fought", "bravely"],
+      a: 2,
+      exp: "A verb is a doing or action word. 'fought' is the action here."
+    },
+    {
+      q: "Identify the ADJECTIVE in this sentence: The ancient castle stood silently.",
+      opts: ["ancient", "castle", "stood", "silently"],
+      a: 0,
+      exp: "An adjective describes a noun. 'ancient' describes the castle."
+    },
+    {
+      q: "Identify the ADVERB in this sentence: The mysterious wizard whispered quietly.",
+      opts: ["mysterious", "wizard", "whispered", "quietly"],
+      a: 3,
+      exp: "An adverb describes how a verb is done. 'quietly' describes how he whispered."
+    }
+  ];
+  
+  const selected = types[Math.floor(Math.random() * types.length)];
+  return { ...selected, subject: 'english', topic: 'grammar' };
+};
+
+const generateLocalVerbal = (year = 4) => {
+  const types = [
+    {
+      q: "Find the next letter in the sequence: A, C, E, G, ?",
+      opts: ["H", "I", "J", "K"],
+      a: 1,
+      exp: "The sequence skips one letter forward each time in the alphabet (+2)."
+    },
+    {
+      q: "If the secret code shifts every letter forward by 1, what is the code for CAT?",
+      opts: ["DBS", "DBU", "BZS", "CBU"],
+      a: 1,
+      exp: "C + 1 = D, A + 1 = B, T + 1 = U. The code is DBU."
+    }
+  ];
+  
+  const selected = types[Math.floor(Math.random() * types.length)];
+  return { ...selected, subject: 'verbal', topic: 'sequences' };
+};
+
+const generateLocalNVR = (year = 4) => {
+  const types = [
+    {
+      q: "Which of these is the odd one out?",
+      opts: ["Triangle", "Square", "Circle", "Red"],
+      a: 3,
+      exp: "Red is a color, while the others are all shapes."
+    },
+    {
+      q: "What comes next in the visual pattern? 🟦 🟧 🟦 🟧 ?",
+      opts: ["🟦", "🟧", "🟩", "🟪"],
+      a: 0,
+      exp: "The pattern simply alternates between Blue and Orange. Next is Blue."
+    }
+  ];
+  
+  const selected = types[Math.floor(Math.random() * types.length)];
+  return { ...selected, subject: 'nvr', topic: 'patterns' };
+};
+
 const generateSessionQuestions = async (year, region, count, proficiency, subject) => {
   const allQuestions = [];
+  
   for (let i = 0; i < count; i++) {
-    allQuestions.push(generateLocalMaths(year));
+    if (subject === 'english') {
+      allQuestions.push(generateLocalEnglish(year));
+    } else if (subject === 'verbal') {
+      allQuestions.push(generateLocalVerbal(year));
+    } else if (subject === 'nvr') {
+      allQuestions.push(generateLocalNVR(year));
+    } else if (subject === 'mock') {
+      // Mixed subjects for a mock exam
+      const rand = Math.random();
+      if (rand < 0.25) allQuestions.push(generateLocalMaths(year));
+      else if (rand < 0.5) allQuestions.push(generateLocalEnglish(year));
+      else if (rand < 0.75) allQuestions.push(generateLocalVerbal(year));
+      else allQuestions.push(generateLocalNVR(year));
+    } else {
+      // Default to maths if "maths" or unrecognized
+      allQuestions.push(generateLocalMaths(year));
+    }
   }
   return allQuestions;
 };
