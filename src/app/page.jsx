@@ -2,18 +2,9 @@
 import React, { useState } from "react";
 
 // --- MOCKS FOR PREVIEW ENVIRONMENT ---
-// These allow the component to render in the browser preview without external dependencies.
+// These mocks allow the component to render in the preview without external dependencies.
 const useRouter = () => ({
-  push: (path) => {
-    console.log(`Navigating to: ${path}`);
-    if (typeof window !== "undefined") {
-      const msg = document.createElement('div');
-      msg.className = "fixed bottom-4 right-4 bg-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl font-black z-[9999] animate-in slide-in-from-bottom";
-      msg.innerText = `Successfully signed in! (Redirecting to Dashboard...)`;
-      document.body.appendChild(msg);
-      setTimeout(() => msg.remove(), 3000);
-    }
-  },
+  push: (path) => console.log(`Navigating to: ${path}`),
 });
 
 const createBrowserClient = () => ({
