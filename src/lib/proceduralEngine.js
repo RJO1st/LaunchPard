@@ -392,6 +392,6 @@ export const fetchClaudeResponse = async (prompt, system) => {
     const data = await response.json();
     return data.content[0].text;
   } catch (err) {
-    return "Sage says: That's a great effort! Explaining your thinking is the secret to becoming a master scholar. ⭐ Keep going!";
+    return "Tara says: That's a great effort! Explaining your thinking is the secret to becoming a master scholar. ⭐ Keep going!";
   }
 };
