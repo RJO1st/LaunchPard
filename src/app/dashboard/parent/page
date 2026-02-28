@@ -1,403 +1,265 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 
-// --- MOCKS FOR CANVAS PREVIEW ENVIRONMENT ---
-// These mock functions allow the dashboard to render and function in the preview canvas
-// without needing the actual Next.js router or Supabase server-side libraries.
-const useRouter = () => ({
-  push: (path) => console.log(`Mock Navigation to: ${path}`)
-});
+// --- MOCKS FOR PREVIEW ENVIRONMENT ---
+// These allow the code to compile in the browser-based preview without external server-only libraries.
+const Link = ({ href, children, ...props }) => (
+  <a href={href} {...props} onClick={(e) => e.preventDefault()}>
+    {children}
+  </a>
+);
 
-const createBrowserClient = () => ({
+const createBrowserClient = (url, key) => ({
   auth: {
-    getUser: async () => ({ data: { user: { id: "mock-user-id", email: "parent@example.com" } }, error: null }),
-    signOut: async () => alert("Signed out successfully (Mock)")
+    getUser: async () => {
+      // Mocked user for preview
+      return { data: { user: { id: "mock-parent-id", email: "parent@example.com" } }, error: null };
+    }
   },
   from: (table) => ({
     select: () => ({
       eq: () => ({
-        order: async () => ({
-          data: [
-            { id: 1, username: "SpaceRanger99", pin_code: "1234", year_level: 4 }
-          ],
-          error: null
-        })
+        order: async () => {
+          // Mocked scholars for preview
+          return { 
+            data: [
+              { id: "1", name: "Willy", year: 4, region: "GL", total_xp: 1250, proficiency: 75 },
+              { id: "2", name: "Sarah", year: 2, region: "GL", total_xp: 850, proficiency: 60 }
+            ], 
+            error: null 
+          };
+        }
       })
     }),
-    insert: async () => ({ error: null })
+    insert: async (data) => {
+      console.log("Mocking insert:", data);
+      return { error: null };
+    }
   })
 });
-// ---------------------------------------------
 
-// --- ICONS ---
-const PlusIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
-const UserIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
-const ChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>;
-const CreditCardIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>;
-const LogOutIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>;
-const CheckCircleIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+// Inlined Icons to avoid resolution errors in preview
+const ArrowRightIcon = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+);
+const UserPlusIcon = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+);
+const StarIcon = ({ size = 24, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+);
+const TrophyIcon = ({ size = 24, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+);
+const XCircleIcon = ({ size = 24, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+);
+const ShieldCheckIcon = ({ size = 24, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+);
+// -------------------------------------
 
-export default function ParentDashboard() {
-  const [activeTab, setActiveTab] = useState("scholars"); // 'scholars', 'analytics', 'billing'
-  const [students, setStudents] = useState([]);
+export default function ParentDashboardPage() {
+  const [scholars, setScholars] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [isPro, setIsPro] = useState(false); // Mock subscription state
-  
-  // New Student Form
-  const [username, setUsername] = useState("");
-  const [pinCode, setPinCode] = useState("");
-  const [yearLevel, setYearLevel] = useState("4");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState(null);
-
-  const router = useRouter();
   
-  const supabase = createBrowserClient();
+  const [formData, setFormData] = useState({ name: "", year: "4", region: "GL" });
+
+  // Guard against ReferenceError in browser-only preview environments
+  const supabaseUrl = typeof process !== "undefined" && process.env ? process.env.NEXT_PUBLIC_SUPABASE_URL : "";
+  const supabaseKey = typeof process !== "undefined" && process.env ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY : "";
+
+  const supabase = createBrowserClient(supabaseUrl || "", supabaseKey || "");
 
   useEffect(() => {
-    fetchUserData();
+    fetchScholars();
   }, []);
 
-  const fetchUserData = async () => {
+  const fetchScholars = async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        router.push("/");
+        setError("Please sign in to view your dashboard.");
         return;
       }
-      setUserEmail(user.email);
 
-      const { data, error } = await supabase
-        .from("students")
+      const { data, error: fetchError } = await supabase
+        .from("scholars")
         .select("*")
         .eq("parent_id", user.id)
         .order("created_at", { ascending: true });
 
-      if (error) throw error;
-      setStudents(data || []);
+      if (fetchError) throw fetchError;
+      setScholars(data || []);
     } catch (err) {
-      console.error("Error fetching data:", err.message);
+      console.error("Error fetching scholars:", err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddStudent = async (e) => {
+  const handleAddScholar = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
     try {
-      if (!isPro && students.length >= 1) {
-        throw new Error("Free accounts are limited to 1 Scholar. Upgrade to Pro to add more!");
-      }
-
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { error } = await supabase
-        .from("students")
-        .insert([{
-          parent_id: user.id,
-          username: username,
-          pin_code: pinCode,
-          year_level: parseInt(yearLevel)
-        }]);
+      const newScholar = {
+        parent_id: user.id,
+        name: formData.name,
+        year: parseInt(formData.year),
+        region: formData.region,
+        total_xp: 0,
+        proficiency: 50
+      };
 
-      if (error) throw error;
+      const { error: insertError } = await supabase
+        .from("scholars")
+        .insert([newScholar]);
 
-      setUsername("");
-      setPinCode("");
-      setYearLevel("4");
-      setShowAddModal(false);
-      
-      // Update locally for the preview
-      setStudents(prev => [...prev, { id: Date.now(), username, pin_code: pinCode, year_level: parseInt(yearLevel) }]);
-      
+      if (insertError) throw insertError;
+
+      setFormData({ name: "", year: "4", region: "GL" });
+      setShowForm(false);
+      fetchScholars();
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsSubmitting(false);
+      alert("Failed to add scholar: " + err.message);
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
-  };
-
-  const handleSubscribe = async () => {
-    alert("Redirecting to Stripe Checkout...");
-  };
-
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-900">
-      
-      {/* --- SIDEBAR NAVIGATION --- */}
-      <aside className="w-full md:w-72 bg-white border-r border-slate-200 p-6 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-12 px-2">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-              <UserIcon />
-            </div>
-            <div>
-              <h1 className="font-black text-xl leading-none tracking-tight">Parent Portal</h1>
-              <p className="text-xs text-slate-400 font-bold mt-1 truncate">{userEmail}</p>
-            </div>
+    <div className="min-h-screen bg-slate-50 p-6 md:p-12 animate-in fade-in font-sans">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">Parent Portal</h1>
+            <p className="text-slate-500 font-bold flex items-center gap-2">
+              <ShieldCheckIcon size={18} className="text-indigo-500" />
+              Manage your academy scholars and track their odyssey.
+            </p>
           </div>
-
-          <nav className="space-y-2">
+          <div className="flex gap-4">
+            <Link href="/" className="bg-white border-2 border-slate-200 text-slate-600 px-6 py-3 rounded-2xl font-black hover:bg-slate-50 transition-all shadow-sm">
+              Gateway
+            </Link>
             <button 
-              onClick={() => setActiveTab("scholars")} 
-              className={`w-full flex items-center gap-3 px-4 py-4 rounded-2xl font-bold transition-all ${activeTab === "scholars" ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+              onClick={() => setShowForm(!showForm)} 
+              className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95"
             >
-              <UserIcon /> My Scholars
+              <UserPlusIcon size={20}/> {showForm ? "Cancel" : "Add Scholar"}
             </button>
-            <button 
-              onClick={() => setActiveTab("analytics")} 
-              className={`w-full flex items-center gap-3 px-4 py-4 rounded-2xl font-bold transition-all ${activeTab === "analytics" ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
-            >
-              <ChartIcon /> Progress & Analytics
-            </button>
-            <button 
-              onClick={() => setActiveTab("billing")} 
-              className={`w-full flex items-center justify-between px-4 py-4 rounded-2xl font-bold transition-all ${activeTab === "billing" ? "bg-indigo-50 text-indigo-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
-            >
-              <div className="flex items-center gap-3"><CreditCardIcon /> Billing & Plan</div>
-              {isPro && <span className="bg-amber-400 text-amber-900 text-[10px] uppercase tracking-widest px-2 py-1 rounded-full font-black">Pro</span>}
-            </button>
-          </nav>
+          </div>
         </div>
 
-        <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-4 text-slate-400 hover:text-rose-500 font-bold transition-colors w-full mt-8">
-          <LogOutIcon /> Sign Out
-        </button>
-      </aside>
+        {/* Error State */}
+        {error && (
+          <div className="bg-rose-50 border-2 border-rose-100 p-6 rounded-[32px] text-rose-600 font-bold mb-10 flex items-center gap-3">
+            <XCircleIcon size={24} /> {error}
+          </div>
+        )}
 
-      {/* --- MAIN CONTENT AREA --- */}
-      <main className="flex-1 p-6 md:p-12 overflow-y-auto">
-        <div className="max-w-5xl mx-auto">
-          
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-            </div>
-          ) : (
-            <>
-              {/* TAB 1: SCHOLARS */}
-              {activeTab === "scholars" && (
-                <div className="animate-in fade-in">
-                  <div className="flex justify-between items-end mb-8">
-                    <div>
-                      <h2 className="text-3xl font-black text-slate-800">Your Scholars</h2>
-                      <p className="text-slate-500 font-bold mt-2">Manage access and view individual PIN codes.</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {students.map((student) => (
-                      <div key={student.id} className="bg-white rounded-[32px] p-8 shadow-sm border-2 border-slate-100 flex flex-col items-center text-center transition-all hover:shadow-md hover:border-indigo-200 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-indigo-500"></div>
-                        <div className="bg-indigo-50 w-20 h-20 rounded-2xl flex items-center justify-center text-indigo-600 mb-4 shadow-inner">
-                          <UserIcon />
-                        </div>
-                        <h3 className="text-2xl font-black text-slate-900 mb-1">{student.username}</h3>
-                        <p className="text-slate-400 font-bold mb-4">Year {student.year_level}</p>
-                        
-                        <div className="bg-slate-50 w-full py-3 rounded-xl border border-slate-200 mb-6">
-                          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">Login PIN</p>
-                          <p className="text-2xl font-mono font-black tracking-[0.2em] text-slate-700">{student.pin_code}</p>
-                        </div>
-                        
-                        <button onClick={() => setActiveTab("analytics")} className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl py-3 transition-colors">
-                          View Progress
-                        </button>
-                      </div>
-                    ))}
-
-                    {/* Add Student Button */}
-                    <button 
-                      onClick={() => setShowAddModal(true)}
-                      className="bg-indigo-50/50 border-4 border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 rounded-[32px] p-8 flex flex-col items-center justify-center text-center transition-all group min-h-[320px]"
-                    >
-                      <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-indigo-600 mb-4 shadow-sm group-hover:scale-110 transition-transform">
-                        <PlusIcon />
-                      </div>
-                      <h3 className="text-xl font-black text-indigo-900">Add Scholar</h3>
-                      {!isPro && students.length >= 1 && (
-                        <p className="text-xs text-amber-600 font-bold mt-2 bg-amber-100 px-3 py-1 rounded-full">Requires Pro</p>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: ANALYTICS */}
-              {activeTab === "analytics" && (
-                <div className="animate-in fade-in">
-                  <h2 className="text-3xl font-black text-slate-800 mb-2">Progress Analytics</h2>
-                  <p className="text-slate-500 font-bold mb-8">Track performance across all 11+ subjects.</p>
-
-                  {students.length === 0 ? (
-                    <div className="bg-white rounded-[32px] p-12 text-center border-2 border-slate-100">
-                      <ChartIcon className="mx-auto text-slate-300 mb-4 w-16 h-16" />
-                      <h3 className="text-xl font-black text-slate-700 mb-2">No Scholars Found</h3>
-                      <p className="text-slate-500 font-bold">Add a student to start tracking their progress.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {/* High Level Stats */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                          <p className="text-slate-400 font-bold text-sm uppercase tracking-wider mb-2">Quests Completed</p>
-                          <p className="text-4xl font-black text-indigo-600">12</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                          <p className="text-slate-400 font-bold text-sm uppercase tracking-wider mb-2">Average Accuracy</p>
-                          <p className="text-4xl font-black text-emerald-500">84%</p>
-                        </div>
-                        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                          <p className="text-slate-400 font-bold text-sm uppercase tracking-wider mb-2">Time Practiced</p>
-                          <p className="text-4xl font-black text-amber-500">2h 15m</p>
-                        </div>
-                      </div>
-
-                      {/* Subject Breakdown */}
-                      <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
-                        <h3 className="text-xl font-black mb-6">Subject Mastery</h3>
-                        <div className="space-y-6">
-                          <div>
-                            <div className="flex justify-between mb-2 font-bold"><span className="text-slate-700">Mathematics</span><span className="text-slate-500">90%</span></div>
-                            <div className="w-full bg-slate-100 rounded-full h-4"><div className="bg-indigo-500 h-4 rounded-full" style={{width: '90%'}}></div></div>
-                          </div>
-                          <div>
-                            <div className="flex justify-between mb-2 font-bold"><span className="text-slate-700">English Comprehension</span><span className="text-slate-500">75%</span></div>
-                            <div className="w-full bg-slate-100 rounded-full h-4"><div className="bg-emerald-500 h-4 rounded-full" style={{width: '75%'}}></div></div>
-                          </div>
-                          <div>
-                            <div className="flex justify-between mb-2 font-bold"><span className="text-slate-700">Verbal Reasoning</span><span className="text-slate-500">60%</span></div>
-                            <div className="w-full bg-slate-100 rounded-full h-4"><div className="bg-amber-500 h-4 rounded-full" style={{width: '60%'}}></div></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TAB 3: BILLING & SUBSCRIPTION */}
-              {activeTab === "billing" && (
-                <div className="animate-in fade-in max-w-3xl">
-                  <h2 className="text-3xl font-black text-slate-800 mb-2">Billing & Plan</h2>
-                  <p className="text-slate-500 font-bold mb-8">Manage your Quest Academy subscription.</p>
-
-                  <div className="bg-white rounded-[32px] border-2 border-slate-100 shadow-sm overflow-hidden mb-8">
-                    <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                      <div>
-                        <p className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Current Plan</p>
-                        <h3 className="text-3xl font-black text-slate-900">{isPro ? "Academy Pro" : "Scholar Basic"}</h3>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Status</p>
-                        <span className={`px-4 py-2 rounded-full font-black text-sm ${isPro ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
-                          {isPro ? "Active" : "Free Tier"}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="p-8">
-                      {isPro ? (
-                        <div>
-                          <p className="text-slate-600 font-bold mb-6">Thank you for investing in your child's future. You have access to all premium features including unlimited scholars and AI feedback.</p>
-                          <button className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-6 py-3 rounded-xl transition-colors">Manage Stripe Billing</button>
-                        </div>
-                      ) : (
-                        <div>
-                          <ul className="space-y-4 mb-8">
-                            <li className="flex items-center gap-3 text-slate-600 font-bold"><CheckCircleIcon /> Add multiple scholars to one account</li>
-                            <li className="flex items-center gap-3 text-slate-600 font-bold"><CheckCircleIcon /> Deep progress tracking and analytics</li>
-                            <li className="flex items-center gap-3 text-slate-600 font-bold"><CheckCircleIcon /> Unlimited AI 'Explain it Back' tutoring</li>
-                          </ul>
-                          <button onClick={handleSubscribe} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-4 rounded-2xl shadow-lg transition-all hover:-translate-y-1">
-                            Upgrade to Pro (£9.99/mo)
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-        </div>
-      </main>
-
-      {/* --- ADD STUDENT MODAL --- */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-[100] animate-in fade-in">
-          <div className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl relative">
-            <h2 className="text-2xl font-black text-slate-900 mb-6">Enroll New Scholar</h2>
-            
-            {error && <div className="bg-rose-50 text-rose-600 p-4 rounded-xl mb-6 text-sm font-bold border border-rose-100">{error}</div>}
-
-            <form onSubmit={handleAddStudent} className="space-y-5">
-              <div>
-                <label className="block text-sm font-black text-slate-500 mb-2 uppercase tracking-wider">Scholar Username</label>
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl px-5 py-4 font-bold focus:outline-none focus:border-indigo-500"
-                  placeholder="e.g. SpaceRanger99"
+        {/* Add Scholar Form */}
+        {showForm && (
+          <div className="bg-white rounded-[40px] p-8 md:p-12 shadow-xl border-2 border-indigo-100 mb-12 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16 opacity-50" />
+            <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-3">
+              <TrophyIcon className="text-indigo-500" size={28}/> Enroll New Scholar
+            </h2>
+            <form onSubmit={handleAddScholar} className="grid grid-cols-1 md:grid-cols-3 gap-8 items-end">
+              <div className="space-y-2">
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Scholar Name</label>
+                <input 
+                  required 
+                  placeholder="First Name" 
+                  className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-black focus:border-indigo-500 outline-none transition-all" 
+                  value={formData.name} 
+                  onChange={e => setFormData({ ...formData, name: e.target.value })} 
                 />
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-black text-slate-500 mb-2 uppercase tracking-wider">Secret PIN</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={4}
-                    pattern="\d{4}"
-                    value={pinCode}
-                    onChange={(e) => setPinCode(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl px-5 py-4 font-black tracking-widest text-center focus:outline-none focus:border-indigo-500"
-                    placeholder="1234"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-black text-slate-500 mb-2 uppercase tracking-wider">Year Level</label>
-                  <select 
-                    value={yearLevel} 
-                    onChange={(e) => setYearLevel(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl px-5 py-4 font-bold focus:outline-none focus:border-indigo-500 appearance-none"
-                  >
-                    {[1,2,3,4,5,6].map(y => <option key={y} value={y}>Year {y}</option>)}
-                  </select>
-                </div>
+              <div className="space-y-2">
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest ml-1">School Year</label>
+                <select 
+                  className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-black cursor-pointer focus:border-indigo-500 transition-all outline-none" 
+                  value={formData.year} 
+                  onChange={e => setFormData({ ...formData, year: e.target.value })}
+                >
+                  {[1, 2, 3, 4, 5, 6].map(y => <option key={y} value={y}>Year {y}</option>)}
+                </select>
               </div>
-              <p className="text-xs text-slate-400 font-bold mb-4">Kids use this 4-digit PIN to log in safely.</p>
-
-              <div className="flex gap-3 mt-8">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl py-4 transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={isSubmitting} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl py-4 shadow-lg shadow-indigo-200 transition-all disabled:opacity-50">
-                  {isSubmitting ? "Enrolling..." : "Enroll Scholar"}
-                </button>
-              </div>
+              <button type="submit" className="bg-indigo-600 text-white font-black px-8 py-4 rounded-2xl shadow-xl hover:bg-indigo-700 transition-all active:scale-95">
+                Register Scholar
+              </button>
             </form>
           </div>
-        </div>
-      )}
+        )}
 
+        {/* Scholar Roster */}
+        {loading ? (
+          <div className="flex flex-col items-center py-20 opacity-40">
+            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="font-black text-slate-400 uppercase tracking-widest text-sm">Consulting the Vault...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {scholars.map(s => (
+              <div key={s.id} className="bg-white rounded-[40px] p-8 border-2 border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all group">
+                 <div className="flex justify-between items-start mb-8">
+                    <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center font-black text-3xl shadow-inner group-hover:scale-110 transition-transform">
+                      {s.name[0]}
+                    </div>
+                    <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                      Active
+                    </div>
+                 </div>
+                 
+                 <h3 className="text-2xl font-black text-slate-800 mb-1">{s.name}</h3>
+                 <p className="text-slate-400 font-bold text-sm uppercase tracking-widest mb-8">Year {s.year} • {s.region} Exam</p>
+                 
+                 <div className="space-y-5 pt-6 border-t-2 border-slate-50">
+                   <div className="flex justify-between items-center">
+                      <span className="text-slate-500 font-bold">Total Experience</span>
+                      <span className="font-black text-amber-500 flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-full">
+                        <StarIcon size={16} className="fill-amber-500"/> {s.total_xp} XP
+                      </span>
+                   </div>
+                   <div className="flex justify-between items-center">
+                      <span className="text-slate-500 font-bold">Mastery Level</span>
+                      <div className="text-right">
+                        <span className="font-black text-indigo-600">{s.proficiency}%</span>
+                        <div className="w-24 h-1.5 bg-slate-100 rounded-full mt-1 overflow-hidden">
+                          <div className="h-full bg-indigo-500" style={{ width: `${s.proficiency}%` }} />
+                        </div>
+                      </div>
+                   </div>
+                 </div>
+
+                 <Link 
+                   href={`/parent/scholar/${s.id}`} 
+                   className="mt-8 w-full bg-slate-50 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 py-4 rounded-2xl font-black flex items-center justify-center gap-2 transition-all"
+                 >
+                    View Analytics <ArrowRightIcon size={18} />
+                 </Link>
+              </div>
+            ))}
+
+            {scholars.length === 0 && !showForm && (
+               <div className="col-span-full text-center py-24 bg-white rounded-[48px] border-4 border-dashed border-slate-100">
+                  <TrophyIcon size={64} className="mx-auto mb-6 text-slate-200" />
+                  <p className="text-slate-400 font-black text-xl mb-6">No scholars found in your academy.</p>
+                  <button onClick={() => setShowForm(true)} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all">
+                    Register Your First Scholar
+                  </button>
+               </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
