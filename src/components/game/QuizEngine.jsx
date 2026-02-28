@@ -1,7 +1,5 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from "react";
-// Ensure correct import path in your project
-import { generateSessionQuestions, fetchClaudeResponse, getExplanationForQuestion } from './procedural_engine'; 
 
 // --- INLINED ICONS ---
 const CheckCircleIcon = ({ size = 24, className = "" }) => ( <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>);
@@ -11,6 +9,145 @@ const ZapIcon = ({ size = 24, className = "" }) => ( <svg width={size} height={s
 const ArrowRightIcon = ({ size = 24, className = "" }) => ( <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>);
 const EyeIcon = ({ size = 24, className = "" }) => ( <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>);
 const ArrowLeftIcon = ({ size = 24, className = "" }) => ( <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>);
+
+// --- PROCEDURAL ENGINE LOGIC (Inlined for standalone compilation) ---
+const shuffle = (array) => [...array].sort(() => Math.random() - 0.5);
+
+const processTemplateString = (str, vars) => {
+  if (!str) return str;
+  return String(str).replace(/\{([^}]+)\}/g, (match, expr) => {
+    let evaluated = expr.trim();
+    for (const [key, value] of Object.entries(vars)) {
+      const regex = new RegExp(`\\b${key}\\b`, 'g');
+      evaluated = evaluated.replace(regex, value);
+    }
+    if (/[a-zA-Z]/.test(evaluated)) return evaluated;
+    try {
+        const result = new Function(`return ${evaluated};`)();
+        return Number.isFinite(result) ? Math.round(result * 100) / 100 : result;
+    } catch (e) {
+        return evaluated;
+    }
+  });
+};
+
+const mathsTemplates = {
+  addition: {
+    detect: (vars) => (vars.a % 10) + (vars.b % 10) < 10,
+    computeVars: (a, b) => {
+      const units_a = a % 10, tens_a = Math.floor(a / 10);
+      const units_b = b % 10, tens_b = Math.floor(b / 10);
+      const units_sum = units_a + units_b;
+      const answer = a + b;
+      return { a, b, units_a, tens_a, units_b, tens_b, units_sum, units_digit: units_sum, tens_sum: tens_a + tens_b, answer, operation: '+' };
+    },
+    steps: [
+      "Add the units column: {units_a} + {units_b} = {units_sum}",
+      "Write {units_digit} in the units place.",
+      "Add the tens column: {tens_a} + {tens_b} = {tens_sum}",
+      "The answer is {answer}."
+    ],
+    visual: "place-value-chart"
+  },
+  addition_with_carry: {
+    detect: (vars) => (vars.a % 10) + (vars.b % 10) >= 10,
+    computeVars: (a, b) => {
+      const units_a = a % 10, tens_a = Math.floor(a / 10);
+      const units_b = b % 10, tens_b = Math.floor(b / 10);
+      const units_sum = units_a + units_b;
+      const carry = Math.floor(units_sum / 10);
+      const units_digit = units_sum % 10;
+      const tens_sum = tens_a + tens_b + carry;
+      const answer = a + b;
+      return { a, b, units_a, tens_a, units_b, tens_b, units_sum, carry, units_digit, tens_sum, answer, operation: '+' };
+    },
+    steps: [
+      "Add the units column: {units_a} + {units_b} = {units_sum}",
+      "Write {units_digit} in the units place and carry {carry} to the tens column.",
+      "Add the tens including the carry: {tens_a} + {tens_b} + {carry} = {tens_sum}",
+      "Write {tens_sum} in the tens place. The answer is {answer}."
+    ],
+    visual: "place-value-chart"
+  },
+  subtraction: {
+    detect: (vars) => (vars.a % 10) >= (vars.b % 10),
+    computeVars: (a, b) => {
+      const units_a = a % 10, tens_a = Math.floor(a / 10);
+      const units_b = b % 10, tens_b = Math.floor(b / 10);
+      const units_diff = units_a - units_b;
+      const tens_diff = tens_a - tens_b;
+      const answer = a - b;
+      return { a, b, units_a, tens_a, units_b, tens_b, units_diff, tens_diff, answer, operation: '-' };
+    },
+    steps: [
+      "Subtract the units column: {units_a} - {units_b} = {units_diff}",
+      "Write {units_diff} in the units place.",
+      "Subtract the tens column: {tens_a} - {tens_b} = {tens_diff}",
+      "The answer is {answer}."
+    ],
+    visual: "place-value-chart"
+  }
+};
+
+const getExplanationForQuestion = (question) => {
+  if (!question?.vars || !question?.topic || question.subject !== 'maths') return null;
+  const { vars, topic } = question;
+  
+  const baseTopic = topic.split('_')[0]; 
+  const availableTemplates = Object.keys(mathsTemplates)
+       .filter(k => k.startsWith(baseTopic))
+       .map(k => mathsTemplates[k]);
+       
+  const selected = availableTemplates.find(t => t.detect?.(vars)) || mathsTemplates[topic];
+  if (!selected) return null;
+  
+  const computed = selected.computeVars(vars.a, vars.b);
+  const steps = selected.steps.map(step => processTemplateString(step, computed));
+  return { steps, visual: selected.visual, computed };
+};
+
+const generateLocalMaths = (year = 4, difficultyMultiplier = 1) => {
+  const op = Math.random();
+  let q, ans, exp, topic, visual;
+  const maxNum = Math.floor(year * 25 * difficultyMultiplier); 
+  let a, b;
+
+  if (op < 0.5) {
+    a = Math.floor(Math.random() * maxNum) + (year * 5);
+    b = Math.floor(Math.random() * maxNum) + 1;
+    ans = a + b;
+    topic = 'addition';
+    q = `Calculate: ${a} + ${b}`;
+    exp = `Add the units, then the tens. ${a} + ${b} = ${ans}.`;
+    if (year <= 2 && ans <= 20) visual = `${Array(a).fill("🟦").join("")} + ${Array(b).fill("🟧").join("")}`;
+  } else {
+    a = Math.floor(Math.random() * maxNum) + 30;
+    b = Math.floor(Math.random() * a) + 1;
+    ans = a - b;
+    topic = 'subtraction';
+    q = `Calculate: ${a} - ${b}`;
+    exp = `Subtract ${b} from ${a} to get ${ans}.`;
+  }
+
+  const wrong1 = ans + Math.floor(Math.random() * 5) + 1;
+  const wrong2 = ans - (Math.floor(Math.random() * 3) + 1);
+  const wrong3 = ans + 10;
+  const opts = shuffle([String(ans), String(wrong1), String(wrong2), String(wrong3)]);
+  
+  return { q, opts, a: opts.indexOf(String(ans)), exp, subject: 'maths', visual, vars: { a, b }, topic };
+};
+
+const generateSessionQuestions = async (year, region, count, proficiency, subject) => {
+  const allQuestions = [];
+  for (let i = 0; i < count; i++) {
+    allQuestions.push(generateLocalMaths(year));
+  }
+  return allQuestions;
+};
+
+const fetchClaudeResponse = async () => {
+  return "Tara says: That's a great effort! Explaining your thinking is the secret to becoming a master scholar. ✨ Keep going!";
+};
 
 // --- INTERACTIVE VISUAL COMPONENT ---
 const PlaceValueChart = ({ computed, step }) => {
@@ -66,7 +203,6 @@ const PlaceValueChart = ({ computed, step }) => {
   );
 };
 
-
 // --- MAIN QUIZ ENGINE ---
 export default function QuizEngine({ world, student, subject, onClose, onComplete }) {
   const [sessionQuestions, setSessionQuestions] = useState([]);
@@ -89,11 +225,18 @@ export default function QuizEngine({ world, student, subject, onClose, onComplet
   const timerRef = useRef(null);
 
   useEffect(() => {
-    // Generate prototype mock session
-    generateSessionQuestions(4, "UK", 5, 50, "maths").then(qs => {
-      setSessionQuestions(qs); setGenerating(false);
+    setGenerating(true);
+    generateSessionQuestions(
+      student?.year || 4, 
+      student?.region || "UK", 
+      5, 
+      student?.proficiency || 50, 
+      subject || "maths"
+    ).then(qs => {
+      setSessionQuestions(qs); 
+      setGenerating(false);
     });
-  }, []);
+  }, [student?.year, student?.region, student?.proficiency, subject]);
 
   const handlePick = useCallback((idx) => {
     if (selected !== null) return;
@@ -107,7 +250,6 @@ export default function QuizEngine({ world, student, subject, onClose, onComplet
     } else {
        setResults(r => ({ ...r, answers: [...r.answers, { q: currQ.q, correct: false }] }));
        
-       // Answered incorrectly. Compute the explanation steps ready for the button click.
        const expData = getExplanationForQuestion(currQ);
        if (expData) setExplanationData(expData);
     }
@@ -142,40 +284,56 @@ export default function QuizEngine({ world, student, subject, onClose, onComplet
     }
   };
 
-  if (generating) return <div className="p-10 text-center text-xl font-bold">Generating...</div>;
+  if (generating) return <div className="p-10 text-center text-xl font-black text-slate-400">Loading Quest...</div>;
   if (finished) return <div className="p-10 text-center text-3xl font-black text-indigo-600">Quest Complete!</div>;
 
   const q = sessionQuestions[qIdx];
+
+  // Derive if the user is allowed to proceed to the next question yet
+  const isCorrect = selected === q.a;
+  const finishedExplanation = showInteractiveExplanation && explanationData && explanationStep === explanationData.steps.length - 1;
+  const hasEIBFeedback = !!eibFeedback;
+  const canProceed = isCorrect || (selected !== null && !isCorrect && (hasEIBFeedback || finishedExplanation));
 
   return (
     <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xl z-[4000] flex items-center justify-center p-4 md:p-8 text-slate-900">
       <div className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[95vh] relative">
         
         {/* Progress Bar */}
-        <div className="h-3 bg-slate-100">
+        <div className="h-3 bg-slate-100 shrink-0">
           <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${((qIdx + 1) / sessionQuestions.length) * 100}%` }} />
         </div>
 
-        <div className="p-6 md:p-10 overflow-y-auto">
+        {/* Content Viewport with explicit bottom padding to prevent hidden buttons */}
+        <div className="p-6 md:p-10 pb-24 flex-1 overflow-y-auto">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
              <span className="font-black text-indigo-500 uppercase tracking-widest text-sm bg-indigo-50 px-4 py-2 rounded-xl">Q{qIdx + 1} of {sessionQuestions.length}</span>
-             <div className={`text-2xl font-black ${timeLeft < 5 ? "text-rose-500 animate-pulse" : "text-slate-800"}`}>00:{timeLeft.toString().padStart(2, '0')}</div>
+             
+             <div className="flex items-center gap-4">
+               <div className={`text-2xl font-black ${timeLeft < 5 ? "text-rose-500 animate-pulse" : "text-slate-800"}`}>00:{timeLeft.toString().padStart(2, '0')}</div>
+               <button onClick={onClose} className="text-slate-400 hover:text-rose-500 transition-colors p-2" title="Close Quest">
+                 <XCircleIcon size={28}/>
+               </button>
+             </div>
           </div>
 
           {/* Question Text */}
           <h3 className="text-3xl md:text-5xl font-black leading-tight text-slate-800 mb-10">{q.q}</h3>
 
+          {/* Optional Initial Visualizer */}
+          {q.visual && <div className="mb-8 p-6 bg-slate-50 rounded-2xl border-2 border-slate-200 text-center text-4xl tracking-widest">{q.visual}</div>}
+
           {/* Options Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {q.opts.map((opt, i) => {
               const isSelected = selected === i;
-              const isCorrect = i === q.a;
+              const isCorrectAnswer = i === q.a;
               const isAnswered = selected !== null;
 
               let btnClasses = "bg-white border-slate-200 hover:border-indigo-500 text-slate-700";
               if (isAnswered) {
-                if (isCorrect) btnClasses = "bg-emerald-50 border-emerald-500 text-emerald-700 ring-4 ring-emerald-100 z-10 scale-[1.02]";
+                if (isCorrectAnswer) btnClasses = "bg-emerald-50 border-emerald-500 text-emerald-700 ring-4 ring-emerald-100 z-10 scale-[1.02]";
                 else if (isSelected) btnClasses = "bg-rose-50 border-rose-500 text-rose-700 ring-4 ring-rose-100 z-10 scale-[1.02]";
                 else btnClasses = "bg-white border-slate-200 opacity-40 grayscale";
               }
@@ -184,8 +342,8 @@ export default function QuizEngine({ world, student, subject, onClose, onComplet
                 <button key={i} disabled={isAnswered} onClick={() => handlePick(i)} className={`w-full text-left p-6 md:p-8 rounded-[24px] font-black border-2 transition-all duration-300 text-2xl relative ${btnClasses}`}>
                   <div className="flex justify-between items-center">
                     <span>{opt}</span>
-                    {isAnswered && isCorrect && <CheckCircleIcon className="text-emerald-500" size={32} />}
-                    {isAnswered && isSelected && !isCorrect && <XCircleIcon className="text-rose-500" size={32} />}
+                    {isAnswered && isCorrectAnswer && <CheckCircleIcon className="text-emerald-500" size={32} />}
+                    {isAnswered && isSelected && !isCorrectAnswer && <XCircleIcon className="text-rose-500" size={32} />}
                   </div>
                 </button>
               );
@@ -204,7 +362,6 @@ export default function QuizEngine({ world, student, subject, onClose, onComplet
               {/* BRANCHING: Student got it wrong -> Show Help Options */}
               {selected !== q.a && !showInteractiveExplanation && (
                 <div className="flex flex-col md:flex-row gap-4">
-                   {/* Scaffolded Interactive Visuaization (Only shows if templates exist for this topic) */}
                    {explanationData && (
                      <button 
                        onClick={() => setShowInteractiveExplanation(true)} 
@@ -214,9 +371,8 @@ export default function QuizEngine({ world, student, subject, onClose, onComplet
                      </button>
                    )}
                    
-                   {/* Active Recall / Claude API */}
                    <button 
-                     onClick={() => { document.getElementById('eib-box').focus(); }} 
+                     onClick={() => { document.getElementById('eib-box')?.focus(); }} 
                      className="flex-1 bg-amber-100 text-amber-800 font-black py-5 px-6 rounded-2xl flex items-center justify-center gap-3 hover:bg-amber-200 transition-colors text-lg border-2 border-amber-200"
                    >
                      <ZapIcon size={24} /> Explain It Back
@@ -232,19 +388,16 @@ export default function QuizEngine({ world, student, subject, onClose, onComplet
                      <span className="bg-indigo-200 text-indigo-800 font-bold px-3 py-1 rounded-full text-sm">Step {explanationStep + 1} of {explanationData.steps.length}</span>
                   </div>
 
-                  {/* Visual Renderer */}
                   <div className="mb-8">
                     {explanationData.visual === "place-value-chart" && (
                       <PlaceValueChart computed={explanationData.computed} step={explanationStep} />
                     )}
                   </div>
 
-                  {/* Step Text */}
                   <div className="bg-white p-6 rounded-2xl border-2 border-indigo-100 text-center mb-8 shadow-sm">
                     <p className="text-2xl font-black text-indigo-900">{explanationData.steps[explanationStep]}</p>
                   </div>
 
-                  {/* Stepper Controls */}
                   <div className="flex gap-4">
                     <button 
                       onClick={() => setExplanationStep(s => Math.max(0, s - 1))}
@@ -284,11 +437,13 @@ export default function QuizEngine({ world, student, subject, onClose, onComplet
                 </div>
               )}
 
-              {/* NEXT QUEST BUTTON */}
-              {((selected === q.a) || (selected !== q.a && (eibFeedback || (showInteractiveExplanation && explanationStep === explanationData.steps.length - 1)))) && (
-                <button onClick={next} className="w-full bg-slate-900 text-white font-black py-6 rounded-[24px] flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all text-xl mt-6">
-                  {qIdx === sessionQuestions.length - 1 ? "Complete Journey" : "Next Quest"} <ArrowRightIcon size={24} />
-                </button>
+              {/* NEXT QUEST BUTTON (Fixed Visibility Logic) */}
+              {canProceed && (
+                <div className="pt-6 mt-6 border-t-2 border-slate-100 animate-in fade-in zoom-in-95 duration-300">
+                  <button onClick={next} className="w-full bg-slate-900 text-white font-black py-6 rounded-[24px] flex items-center justify-center gap-3 shadow-xl hover:bg-black transition-all text-xl">
+                    {qIdx === sessionQuestions.length - 1 ? "Complete Journey" : "Next Quest"} <ArrowRightIcon size={24} />
+                  </button>
+                </div>
               )}
             </div>
           )}
