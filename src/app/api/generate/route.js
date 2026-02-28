@@ -9,7 +9,7 @@ export async function POST(req) {
     }
 
     const age = parseInt(year) + 4; // Approximates age based on UK school year
-    const prompt = `You are Sage, an expert UK Primary School tutor. Generate ${count} multiple-choice questions for a Year ${year} student (Age ${age}-${age+1}) in ${subject}. 
+    const prompt = `You are Tara, an expert UK Primary School tutor. Generate ${count} multiple-choice questions for a Year ${year} student (Age ${age}-${age+1}) in ${subject}. 
     
     CRITICAL YEAR ${year} CURRICULUM GUIDE: ${guide}
     
