@@ -2,6 +2,34 @@ import { supabase } from './supabase';
 
 const shuffle = (array) => [...array].sort(() => Math.random() - 0.5);
 
+// --- DYNAMIC TEMPLATE PARSER (The Multiplier Engine) ---
+// This finds placeholders like {a}, {s*s}, or {adj} and replaces them with real numbers/words.
+const processTemplateString = (str, vars) => {
+  if (!str) return str;
+  return String(str).replace(/\{([^}]+)\}/g, (match, expr) => {
+    try {
+      // If it's a known string word (like 'adj' or 'noun')
+      if (vars[expr] !== undefined && typeof vars[expr] === 'string') {
+        return vars[expr];
+      }
+      // Otherwise, securely evaluate it as a mathematical expression (like s*s)
+      const func = new Function(...Object.keys(vars), `return ${expr};`);
+      const result = func(...Object.values(vars));
+      
+      // Return the result rounded cleanly to 2 decimals if it's a messy fraction
+      return Number.isFinite(result) ? Math.round(result * 100) / 100 : result;
+    } catch (e) {
+      // If evaluation fails, just return the raw string to prevent a crash
+      return match;
+    }
+  });
+};
+
+const NOUNS = ["lion", "eagle", "castle", "knight", "ocean", "mountain", "forest", "wizard", "dragon", "ship", "village", "shadow", "river", "king", "queen", "wolf", "bear", "giant", "goblin", "sword", "shield", "crown", "jewel", "storm", "wind", "tree", "island", "cave", "monster", "hero"];
+const ADJS = ["fierce", "brave", "ancient", "mysterious", "dark", "gleaming", "silent", "massive", "hidden", "swift", "clever", "wild", "frozen", "burning", "magical", "golden", "silver", "broken", "lost", "heavy", "light", "tall", "short", "deep", "shallow", "rough", "smooth", "sharp", "dull", "proud"];
+const VERBS = ["roared", "soared", "crumbled", "fought", "crashed", "stood", "whispered", "vanished", "glowed", "ran", "jumped", "flew", "swam", "crawled", "slept", "woke", "hid", "found", "lost", "won", "spoke", "sang", "cried", "laughed", "smiled", "frowned", "walked", "marched", "stumbled", "fell"];
+const ADVERBS = ["loudly", "gracefully", "slowly", "bravely", "violently", "firmly", "quietly", "suddenly", "brightly", "quickly", "softly", "harshly", "gently", "roughly", "happily", "sadly", "angrily", "calmly", "eagerly", "reluctantly", "carefully", "carelessly", "boldly", "shyly", "fiercely", "weakly", "proudly", "humbly", "easily", "hardly"];
+
 export const generateLocalMaths = (year) => {
   const op = Math.random();
   let q, ans, exp;
@@ -41,11 +69,6 @@ export const generateLocalMaths = (year) => {
   const opts = shuffle([String(ans), String(wrong1), String(wrong2), String(wrong3)]);
   return { q, opts, a: opts.indexOf(String(ans)), exp, subject: 'maths' };
 };
-
-const NOUNS = ["lion", "eagle", "castle", "knight", "ocean", "mountain", "forest", "wizard", "dragon", "ship", "village", "shadow", "river", "king", "queen"];
-const ADJS = ["fierce", "brave", "ancient", "mysterious", "dark", "gleaming", "silent", "massive", "hidden", "swift", "clever", "wild", "frozen", "burning"];
-const VERBS = ["roared", "soared", "crumbled", "fought", "crashed", "stood", "whispered", "vanished", "glowed", "ran", "jumped", "flew", "swam", "crawled"];
-const ADVERBS = ["loudly", "gracefully", "slowly", "bravely", "violently", "firmly", "quietly", "suddenly", "brightly", "quickly", "softly", "harshly"];
 
 export const generateLocalEnglish = (year) => {
   const type = Math.random();
@@ -137,16 +160,57 @@ export const generateLocalVerbal = (year) => {
 };
 
 export const generateLocalNVR = (year) => {
-  const shapes = ["🔴", "🟦", "🔺", "⭐", "🔶", "🟩", "🟪", "🔷"];
+  const shapes = ["🔴", "🟦", "🔺", "⭐", "🔶", "🟩", "🟪", "🔷", "💠", "⚪", "⬛", "🔻"];
+  const arrows = ["⬆️", "↗️", "➡️", "↘️", "⬇️", "↙️", "⬅️", "↖️"];
   
-  const s1 = shapes[Math.floor(Math.random() * shapes.length)];
-  let s2 = shapes[Math.floor(Math.random() * shapes.length)];
-  while(s2 === s1) s2 = shapes[Math.floor(Math.random() * shapes.length)];
-  
-  const q = `Which shape does not belong in this sequence? ${s1} ${s1} ${s2} ${s1} ${s1}`;
-  const ans = s2;
-  const wrong = shapes.filter(s => s !== s2 && s !== s1).slice(0, 3);
-  const exp = `All shapes are ${s1} except for the odd one out, ${s2}.`;
+  const type = Math.random();
+  let q, ans, exp, wrong;
+
+  if (type < 0.33) {
+    const s1 = shapes[Math.floor(Math.random() * shapes.length)];
+    let s2 = shapes[Math.floor(Math.random() * shapes.length)];
+    let s3 = shapes[Math.floor(Math.random() * shapes.length)];
+    while(s2 === s1) s2 = shapes[Math.floor(Math.random() * shapes.length)];
+    while(s3 === s1 || s3 === s2) s3 = shapes[Math.floor(Math.random() * shapes.length)];
+    
+    q = `What comes next in the visual pattern? ${s1} ${s2} ${s3} ${s1} ${s2} ?`;
+    ans = s3;
+    wrong = shapes.filter(s => s !== s3 && s !== s1 && s !== s2).slice(0, 3);
+    exp = `The pattern repeats a sequence of three shapes: ${s1}, ${s2}, then ${s3}.`;
+  } else if (type < 0.66) {
+    const startIdx = Math.floor(Math.random() * arrows.length);
+    const rotationStep = Math.floor(Math.random() * 3) + 1;
+    
+    const seq = [
+      arrows[startIdx],
+      arrows[(startIdx + rotationStep) % 8],
+      arrows[(startIdx + rotationStep * 2) % 8]
+    ];
+    ans = arrows[(startIdx + rotationStep * 3) % 8];
+    
+    q = `Follow the rotation to find the next shape: ${seq.join(" ")} ?`;
+    wrong = [
+      arrows[(startIdx + rotationStep * 4) % 8],
+      arrows[(startIdx + rotationStep * 2) % 8],
+      arrows[(startIdx - rotationStep + 8) % 8] 
+    ];
+    exp = `The arrow rotates ${rotationStep * 45} degrees clockwise each time.`;
+  } else {
+    const s1 = shapes[Math.floor(Math.random() * shapes.length)];
+    let s2 = shapes[Math.floor(Math.random() * shapes.length)];
+    while(s2 === s1) s2 = shapes[Math.floor(Math.random() * shapes.length)];
+    
+    q = `Which shape does not belong in this sequence? ${s1} ${s1} ${s2} ${s1} ${s1}`;
+    ans = s2;
+    wrong = shapes.filter(s => s !== s2 && s !== s1).slice(0, 3);
+    exp = `All shapes are ${s1} except for the odd one out, ${s2}.`;
+  }
+
+  wrong = Array.from(new Set(wrong));
+  while (wrong.length < 3) {
+    const backup = shapes[Math.floor(Math.random() * shapes.length)];
+    if (backup !== ans && !wrong.includes(backup)) wrong.push(backup);
+  }
 
   const opts = shuffle([ans, ...wrong]);
   return { q, opts, a: opts.indexOf(ans), exp, subject: 'nvr' };
@@ -161,6 +225,11 @@ export const generateAIQuestions = async ({ year, region, subject, count, profic
     });
     if (!response.ok) throw new Error("Generation failed");
     const data = await response.json();
+    
+    if (!data || !Array.isArray(data.questions)) {
+      throw new Error("Malformed AI response format");
+    }
+
     return data.questions.map(q => ({...q, subject}));
   } catch (e) {
     console.error("AI Generation failed, falling back to local procedural bank.");
@@ -168,7 +237,6 @@ export const generateAIQuestions = async ({ year, region, subject, count, profic
   }
 };
 
-// --- THE NEW DATABASE-FIRST GENERATOR ---
 export const generateSessionQuestions = async (year, region, count, proficiency, subject, mistakes = [], previousQs = []) => {
   const mix = subject === "mock" 
     ? [ { s: "maths", n: Math.ceil(count * 0.35) }, { s: "english", n: Math.ceil(count * 0.35) }, { s: "verbal", n: Math.floor(count * 0.15) }, { s: "nvr", n: Math.floor(count * 0.15) } ]
@@ -179,58 +247,69 @@ export const generateSessionQuestions = async (year, region, count, proficiency,
   for (const { s, n } of mix) {
     let dbQuestions = [];
 
-    // TIER 1: Fetch from your Supabase CSV upload first!
+    // TIER 1: Fetch and parse templates from Supabase
     try {
-      const { data, error } = await supabase
-        .from('question_bank')
-        .select('*')
-        .ilike('subject', `%${s}%`) // Case-insensitive match just in case
-        .lte('year_level', year);   // Ensure it's age appropriate
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('question_bank')
+          .select('*')
+          .ilike('subject', `%${s}%`)
+          .lte('year_level', year);
 
-      if (data && !error) {
-        // Filter out questions the student has already seen in this session
-        const availableDbQs = data.filter(row => !previousQs.includes(row.question_text));
+        if (data && !error) {
+          const availableDbQs = data.filter(row => !previousQs.includes(row.question_text));
 
-        // Format the database row into our App's format
-        dbQuestions = availableDbQs.map(row => {
-          let parsedOpts = row.options;
-          // Ensure options are an array (Supabase JSONB usually handles this, but we parse just in case)
-          if (typeof parsedOpts === 'string') {
-             try { parsedOpts = JSON.parse(parsedOpts); } catch(e) { parsedOpts = ["A", "B", "C", "D"]; }
-          }
+          const processedDbQs = availableDbQs.map(row => {
+            let parsedOpts = row.options;
+            if (typeof parsedOpts === 'string') {
+               try { parsedOpts = JSON.parse(parsedOpts); } catch(e) { parsedOpts = ["A", "B", "C", "D"]; }
+            }
 
-          return {
-            q: row.question_text,
-            opts: parsedOpts || ["A", "B", "C", "D"],
-            a: parseInt(row.correct_index) || 0,
-            exp: row.explanation || "Correct answer based on the curriculum.",
-            subject: s,
-            passage: row.passage || null
-          };
-        });
+            // Generate fresh random math values and words based on the student's year level
+            const vars = {
+              a: Math.floor(Math.random() * (year * 10)) + 2,
+              b: Math.floor(Math.random() * (year * 10)) + 2,
+              c: Math.floor(Math.random() * (year * 5)) + 1,
+              s: Math.floor(Math.random() * (year * 4)) + 3, // Safe side length (e.g. 3cm to 27cm)
+              x: Math.floor(Math.random() * (year * 8)) + 2,
+              y: Math.floor(Math.random() * (year * 8)) + 2,
+              noun: NOUNS[Math.floor(Math.random() * NOUNS.length)],
+              adj: ADJS[Math.floor(Math.random() * ADJS.length)],
+              verb: VERBS[Math.floor(Math.random() * VERBS.length)],
+              adv: ADVERBS[Math.floor(Math.random() * ADVERBS.length)]
+            };
 
-        // Shuffle the database questions so they don't get the same ones in order, and slice out exactly what we need
-        dbQuestions = shuffle(dbQuestions).slice(0, n);
-        allQuestions.push(...dbQuestions);
+            // Evaluate all placeholders in the strings dynamically
+            return {
+              q: processTemplateString(row.question_text, vars),
+              opts: parsedOpts.map(opt => String(processTemplateString(opt, vars))),
+              a: parseInt(row.correct_index) || 0,
+              exp: processTemplateString(row.explanation, vars) || "Correct answer based on the curriculum.",
+              subject: s,
+              passage: row.passage ? processTemplateString(row.passage, vars) : null
+            };
+          });
+
+          dbQuestions = shuffle(processedDbQs).slice(0, n);
+          allQuestions.push(...dbQuestions);
+        }
       }
     } catch (err) {
       console.warn("Vault fetch failed, relying on procedural engine:", err);
     }
 
-    // TIER 2 & 3: If the database didn't have enough questions, fill the rest with Local/AI procedural logic
+    // TIER 2 & 3: Fill any remaining questions
     const remainingNeeded = n - dbQuestions.length;
     
     if (remainingNeeded > 0) {
       const aiCount = Math.floor(remainingNeeded * 0.20); 
       const localCount = remainingNeeded - aiCount;
       
-      // Fallback to AI for 20% of remaining
       if (aiCount > 0) {
         const aiQs = await generateAIQuestions({ year, region, subject: s, count: aiCount, proficiency, previousQuestions: [...previousQs, ...allQuestions.map(q=>q.q)] });
         allQuestions.push(...aiQs);
       }
       
-      // Fallback to Local Engine for the rest
       const neededLocals = localCount + (aiCount > 0 ? aiCount - allQuestions.filter(q => q.subject === s).length + dbQuestions.length : 0);
       for (let i = 0; i < neededLocals; i++) {
         if (s === "maths") allQuestions.push(generateLocalMaths(year));
@@ -254,6 +333,6 @@ export const fetchClaudeResponse = async (prompt, system) => {
     const data = await response.json();
     return data.content[0].text;
   } catch (err) {
-    return "Sage says: Explaining your thinking is the secret to becoming a master scholar. ⭐ Keep going!";
+    return "Sage says: That's a great effort! Explaining your thinking is the secret to becoming a master scholar. ⭐ Keep going!";
   }
 };
