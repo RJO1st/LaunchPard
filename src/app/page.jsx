@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { CURRICULA, SUBJECTS_BY_CURRICULUM } from "@/lib/constants";
 
+export const dynamic = 'force-dynamic';
+
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const RocketIcon = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -97,11 +99,13 @@ const MODAL_TITLES = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function HomePage() {
-  const router   = useRouter();
-  const supabase = createBrowserClient(
+ const supabase = React.useMemo(
+  () => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  ),
+  []
+);
 
   const [modal,       setModal]       = useState(null);
   const [email,       setEmail]       = useState("");
