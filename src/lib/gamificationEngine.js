@@ -143,19 +143,33 @@ export const SUBJECT_ICONS = {
   maths: '🔢', english: '📚', verbal: '🧩',
   nvr: '🎨', science: '🔬', geography: '🌍', history: '📜',
   physics: '⚛️', chemistry: '🧪', biology: '🧬',
+  social_studies: '🏛️', hass: '🌏', commerce: '💰',
+  basic_technology: '🔧',  financial_accounting: '📊',
+  further_mathematics: '📐',  economics: '📈',  government: '🏛️',
+  business_studies: '💼',  basic_science: '🧪',
 };
 
 export const SUBJECT_COLORS = {
-  maths:     { bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200',  dot: 'bg-indigo-500'  },
-  english:   { bg: 'bg-rose-50',    text: 'text-rose-700',    border: 'border-rose-200',    dot: 'bg-rose-500'    },
-  verbal:    { bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200',  dot: 'bg-purple-500'  },
-  nvr:       { bg: 'bg-teal-50',    text: 'text-teal-700',    border: 'border-teal-200',    dot: 'bg-teal-500'    },
-  science:   { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
-  geography: { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    dot: 'bg-blue-500'    },
-  history:   { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   dot: 'bg-amber-500'   },
-  physics:   { bg: 'bg-sky-50',     text: 'text-sky-700',     border: 'border-sky-200',     dot: 'bg-sky-500'     },
-  chemistry: { bg: 'bg-lime-50',    text: 'text-lime-700',    border: 'border-lime-200',    dot: 'bg-lime-500'    },
-  biology:   { bg: 'bg-green-50',   text: 'text-green-700',   border: 'border-green-200',   dot: 'bg-green-500'   },
+  maths:          { bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200',  dot: 'bg-indigo-500'  },
+  english:        { bg: 'bg-rose-50',    text: 'text-rose-700',    border: 'border-rose-200',    dot: 'bg-rose-500'    },
+  verbal:         { bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200',  dot: 'bg-purple-500'  },
+  nvr:            { bg: 'bg-teal-50',    text: 'text-teal-700',    border: 'border-teal-200',    dot: 'bg-teal-500'    },
+  science:        { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+  geography:      { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    dot: 'bg-blue-500'    },
+  history:        { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   dot: 'bg-amber-500'   },
+  physics:        { bg: 'bg-sky-50',     text: 'text-sky-700',     border: 'border-sky-200',     dot: 'bg-sky-500'     },
+  chemistry:      { bg: 'bg-lime-50',    text: 'text-lime-700',    border: 'border-lime-200',    dot: 'bg-lime-500'    },
+  biology:        { bg: 'bg-green-50',   text: 'text-green-700',   border: 'border-green-200',   dot: 'bg-green-500'   },
+  social_studies: { bg: 'bg-cyan-50',    text: 'text-cyan-700',    border: 'border-cyan-200',    dot: 'bg-cyan-500'    },
+  hass:           { bg: 'bg-teal-50',    text: 'text-teal-700',    border: 'border-teal-200',    dot: 'bg-teal-500'    },
+  commerce:          { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   dot: 'bg-amber-500'   },
+  basic_technology:  { bg: 'bg-stone-50',   text: 'text-stone-700',   border: 'border-stone-200',   dot: 'bg-stone-500'   },
+  financial_accounting: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+  further_mathematics: { bg: 'bg-indigo-50',   text: 'text-indigo-700',  border: 'border-indigo-200',  dot: 'bg-indigo-500'  },
+  economics:         { bg: 'bg-teal-50',    text: 'text-teal-700',    border: 'border-teal-200',    dot: 'bg-teal-500'    },
+  government:        { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    dot: 'bg-blue-500'    },
+  business_studies:  { bg: 'bg-purple-50',  text: 'text-purple-700',  border: 'border-purple-200',  dot: 'bg-purple-500'  },
+  basic_science:     { bg: 'bg-lime-50',    text: 'text-lime-700',    border: 'border-lime-200',    dot: 'bg-lime-500'    },
 };
 
 export const getLevelInfo = (totalXp) => {
@@ -183,6 +197,17 @@ export const getLevelInfo = (totalXp) => {
   const neededXp    = next ? next.xp - current.xp : 1;
   const progressPct = Math.min(100, Math.round((progressXp / neededXp) * 100));
   return { current, next, progressPct, progressXp, neededXp };
+};
+
+export const localise = (text, curriculum) => {
+  // Add robust localisation based on the curriculum passed.
+  // This is a placeholder since the full localise function wasn't in this file before.
+  if(!text) return text;
+  const isUS = curriculum === 'us_common_core';
+  if(isUS){
+      return text.replace(/maths/gi, "math").replace(/colour/gi, "color");
+  }
+  return text;
 };
 
 export const sounds = {
@@ -239,5 +264,6 @@ export default {
   formatGradeLabel,
   getSubjectMeta,
   sounds,
+  localise,
   ensureQuestsAssigned,
 };

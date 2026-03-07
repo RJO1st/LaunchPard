@@ -99,9 +99,9 @@ const SUBJECTS_BY_CURRICULUM = {
   aus_acara: ['maths', 'english', 'science'],
   ib_pyp: ['maths', 'english', 'science'],
   ib_myp: ['maths', 'english', 'science'],
-  ng_primary: ['maths', 'english', 'science'],
-  ng_jss: ['maths', 'english', 'science'],
-  ng_sss: ['maths', 'english', 'physics', 'chemistry', 'biology'],
+  ng_primary: ['maths', 'english', 'basic_science'],
+  ng_jss: ['maths', 'english', 'physics', 'basic_technology', 'business_studies', 'basic_science'],
+  ng_sss: ['maths', 'english', 'physics', 'chemistry', 'biology', 'commerce', 'financial_accounting', 'further_mathematics', 'economics', 'government'],
 };
 
 const SUBJECT_META = {
@@ -113,6 +113,15 @@ const SUBJECT_META = {
   physics: { emoji: "⚛️", label: "Physics" },
   chemistry: { emoji: "🧪", label: "Chemistry" },
   biology: { emoji: "🧬", label: "Biology" },
+  commerce: { emoji: "💰", label: "Commerce" },
+  basic_technology: { emoji: "🔧", label: "Basic Tech" },
+  financial_accounting: { emoji: "📊", label: "Financial Accounting" },
+  further_mathematics: { emoji: "📐", label: "Further Maths" },
+  economics: { emoji: "📈", label: "Economics" },
+  government: { emoji: "🏛️", label: "Government" },
+  social_studies: { emoji: "🌍", label: "Social Studies"},
+  business_studies: { emoji: "💼", label: "Business Studies" },
+  basic_science: { emoji: "🧪", label: "Basic Science" },
 };
 
 // ═══════════════════════════════════════════════════════════════════

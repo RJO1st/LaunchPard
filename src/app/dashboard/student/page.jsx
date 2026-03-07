@@ -15,9 +15,10 @@ import ProgressChart from "../../../components/game/ProgressChart";
 import QuestPanel from "../../../components/QuestPanel";
 import { getTrialStatus } from "../../../lib/trialTracking";
 
-const QuizEngine = dynamic(
-  () => import("../../../components/game/QuizEngine"),
-  { loading: () => <LoadingScreen message="Launching mission…" /> }
+// Route seamlessly to the correct engine via the Orchestrator
+const QuestOrchestrator = dynamic(
+  () => import("../../../components/game/QuestOrchestrator"),
+  { loading: () => <LoadingScreen message="Loading LaunchPad Environment…" /> }
 );
 
 // ─── ICONS ────────────────────────────────────────────────────────
@@ -316,7 +317,7 @@ function SubjectCard({ subjectId, onClick, proficiency = 0 }) {
       )}
       <div className="text-4xl mb-3">{icon}</div>
       <h3 className={`text-lg font-black ${colors.text} capitalize`}>{subjectId}</h3>
-      <p className="text-xs text-slate-600 font-bold mt-1">Start Quiz →</p>
+      <p className="text-xs text-slate-600 font-bold mt-1">Start Mission →</p>
     </button>
   );
 }
@@ -477,38 +478,37 @@ export default function StudentDashboard() {
   }, [supabase]);
 
   // ── Data effect ──────────────────────────────────────────────────
-  // ── Data effect ──────────────────────────────────────────────────
-useEffect(() => {
-  if (!scholar?.id) return;
-  const { id, curriculum } = scholar;
-  const yearLevel = scholar.year_level || scholar.year || 5;
-  
-  console.log('🎯 Loading data for:', curriculum, 'Year', yearLevel);
+  useEffect(() => {
+    if (!scholar?.id) return;
+    const { id, curriculum } = scholar;
+    const yearLevel = scholar.year_level ?? scholar.year ?? 5;
+    
+    console.log('🎯 Loading data for:', curriculum, 'Year', yearLevel);
 
-  Promise.all([
-    refreshHistory(id),
-    loadBadges(id),
-    loadQuests(id),
-    loadLeaderboard(yearLevel, curriculum),
-    loadSkills(id),
-    loadRecentQuizzes(id),
-    loadFullSkills(id, curriculum),
-    loadAccuracyData(id, curriculum),
-    ensureQuestsAssigned(id),
+    Promise.all([
+      refreshHistory(id),
+      loadBadges(id),
+      loadQuests(id),
+      loadLeaderboard(yearLevel, curriculum),
+      loadSkills(id),
+      loadRecentQuizzes(id),
+      loadFullSkills(id, curriculum),
+      loadAccuracyData(id, curriculum),
+      ensureQuestsAssigned(id),
+    ]);
+  }, [
+    scholar?.id,
+    scholar?.curriculum,
+    scholar?.year_level ?? scholar?.year,
+    refreshHistory,
+    loadBadges,
+    loadQuests,
+    loadLeaderboard,
+    loadSkills,
+    loadRecentQuizzes,
+    loadFullSkills,
+    loadAccuracyData,
   ]);
-}, [
-  scholar?.id,
-  scholar?.curriculum,
-  scholar?.year_level ?? scholar?.year,  // ← FIX: One value, not two
-  refreshHistory,
-  loadBadges,
-  loadQuests,
-  loadLeaderboard,
-  loadSkills,
-  loadRecentQuizzes,
-  loadFullSkills,
-  loadAccuracyData,
-]);
 
   // ── After quiz completes ─────────────────────────────────────────
   const handleQuestComplete = useCallback(async () => {
@@ -577,10 +577,10 @@ useEffect(() => {
   const subjects   = getSubjectsForCurriculum(curriculum);
   const levelInfo  = getLevelInfo(scholar.total_xp || 0);
 
-  // ── Active quiz ──────────────────────────────────────────────────
+  // ── Active quiz (Routed via QuestOrchestrator) ───────────────────
   if (activeSubject) {
     return (
-      <QuizEngine
+      <QuestOrchestrator
         student={scholar}
         subject={activeSubject}
         curriculum={curriculum}

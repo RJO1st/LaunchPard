@@ -1,303 +1,231 @@
 "use client";
+// ============================================================================
+// ExportReport - PDF Report Generator for Parent Analytics
+// ============================================================================
+import React, { useState } from "react";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { getCurriculumInfo, formatGradeLabel, getLevelInfo } from "@/lib/gamificationEngine";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { CURRICULA, SUBJECT_ICONS, formatGradeLabel } from "@/lib/gamificationEngine";
-
-// Icons
-const RocketIcon = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
-    <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+const DownloadIcon = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
+    <line x1="12" x2="12" y1="15" y2="3"/>
   </svg>
 );
 
-const ArrowLeftIcon = ({ size = 24 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
-  </svg>
-);
+export default function ExportReport({ scholar, results, percentiles, subjectStats }) {
+  const [exporting, setExporting] = useState(false);
 
-export default function ParentAnalytics() {
-  const searchParams = useSearchParams();
-  const scholarId = searchParams.get('scholar');
-  
-  const [scholar, setScholar] = useState(null);
-  const [results, setResults] = useState([]);
-  const [chartData, setChartData] = useState([]);
-  const [subjectStats, setSubjectStats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const generatePDF = () => {
+    if (!scholar || !results || results.length === 0) {
+      alert('Not enough data to generate report');
+      return;
+    }
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+    setExporting(true);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [scholarId]);
-
-  const fetchAnalytics = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const doc = new jsPDF();
+      const curriculumInfo = getCurriculumInfo(scholar.curriculum);
+      const levelInfo = getLevelInfo(scholar.xp || 0);
 
-      // Get scholar (by ID if provided, or first scholar)
-      let scholarQuery = supabase
-        .from('scholars')
-        .select('*')
-        .eq('parent_id', user.id);
+      // ─── HEADER ─────────────────────────────────────────────────────────
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LaunchPard Progress Report', 20, 20);
 
-      if (scholarId) {
-        scholarQuery = scholarQuery.eq('id', scholarId);
-      }
+      // Scholar Info Box
+      doc.setFillColor(240, 240, 255);
+      doc.roundedRect(15, 28, 180, 35, 3, 3, 'F');
 
-      const { data: scholarData } = await scholarQuery.single();
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Scholar Information', 20, 38);
 
-      if (!scholarData) {
-        setLoading(false);
-        return;
-      }
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Name: ${scholar.name}`, 20, 45);
+      doc.text(`Codename: ${scholar.codename}`, 20, 51);
+      doc.text(`Curriculum: ${curriculumInfo.country} ${curriculumInfo.name}`, 20, 57);
+      doc.text(`${curriculumInfo.gradeLabel}: ${scholar.year_level}`, 115, 45);
+      doc.text(`Report Date: ${new Date().toLocaleDateString()}`, 115, 51);
+      doc.text(`Member Since: ${new Date(scholar.created_at).toLocaleDateString()}`, 115, 57);
 
-      setScholar(scholarData);
+      // ─── SUMMARY STATISTICS ─────────────────────────────────────────────
+      let yPos = 75;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Summary Statistics', 20, yPos);
 
-      // Fetch quiz results
-      const { data: resultsData } = await supabase
-        .from('quiz_results')
-        .select('*')
-        .eq('scholar_id', scholarData.id)
-        .order('completed_at', { ascending: true });
+      yPos += 10;
+      const totalQuizzes = results.length;
+      const avgAccuracy = Math.round(
+        results.reduce((sum, r) => sum + r.accuracy, 0) / totalQuizzes
+      );
+      const totalCorrect = results.reduce((sum, r) => sum + (r.correct_count || 0), 0);
+      const totalQuestions = results.reduce((sum, r) => sum + (r.total_questions || 0), 0);
 
-      setResults(resultsData || []);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      
+      const stats = [
+        ['Total Quizzes Completed', totalQuizzes],
+        ['Average Accuracy', `${avgAccuracy}%`],
+        ['Total Questions Answered', totalQuestions],
+        ['Total Correct Answers', totalCorrect],
+        ['Current Level', `${levelInfo.current.level} - ${levelInfo.current.title}`],
+        ['Total XP Earned', (scholar.xp || 0).toLocaleString()],
+        ['Current Streak', `${scholar.streak || 0} days`],
+        ['Coins Balance', `${curriculumInfo.currency}${scholar.coins || 0}`],
+      ];
 
-      // Process data for charts
-      if (resultsData && resultsData.length > 0) {
-        // Accuracy over time
-        const timeData = resultsData.map(r => ({
-          date: new Date(r.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-          accuracy: Math.round((r.score / r.total_questions) * 100)
-        }));
-        setChartData(timeData);
+      stats.forEach(([label, value], i) => {
+        const row = Math.floor(i / 2);
+        const col = i % 2;
+        const x = col === 0 ? 20 : 115;
+        const y = yPos + (row * 7);
+        
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${label}:`, x, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value), x + 60, y);
+      });
 
-        // Subject statistics
-        const subjectMap = {};
-        resultsData.forEach(r => {
-          if (!subjectMap[r.subject]) {
-            subjectMap[r.subject] = { scores: [], total: 0 };
+      // ─── PERFORMANCE BY SUBJECT ─────────────────────────────────────────
+      yPos += 35;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Performance by Subject', 20, yPos);
+
+      yPos += 5;
+      const tableData = Object.entries(subjectStats || {}).map(([subject, stats]) => {
+        const avg = Math.round(stats.total / stats.count);
+        const percentileData = percentiles?.find(p => p.subject === subject);
+        const topPercent = percentileData ? 100 - percentileData.percentile : 'N/A';
+        
+        return [
+          subject.charAt(0).toUpperCase() + subject.slice(1),
+          stats.count,
+          `${avg}%`,
+          topPercent === 'N/A' ? 'N/A' : `Top ${topPercent}%`,
+        ];
+      });
+
+      doc.autoTable({
+        startY: yPos,
+        head: [['Subject', 'Quizzes', 'Avg Accuracy', 'Percentile']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [79, 70, 229], fontStyle: 'bold' },
+        styles: { fontSize: 10, font: 'helvetica' },
+        alternateRowStyles: { fillColor: [245, 245, 250] },
+      });
+
+      // ─── PEER COMPARISON ────────────────────────────────────────────────
+      yPos = doc.lastAutoTable.finalY + 15;
+      
+      if (percentiles && percentiles.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Peer Comparison', 20, yPos);
+
+        yPos += 10;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+
+        percentiles.forEach((p, i) => {
+          const text = `${p.subject.charAt(0).toUpperCase() + p.subject.slice(1)}: ` +
+                      `${p.scholarAvg}% average, better than ${p.percentile}% of ${p.cohortSize} peers ` +
+                      `(Top ${100 - p.percentile}%)`;
+          
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
           }
-          const accuracy = (r.score / r.total_questions) * 100;
-          subjectMap[r.subject].scores.push(accuracy);
-          subjectMap[r.subject].total++;
+          
+          doc.text(text, 20, yPos, { maxWidth: 170 });
+          yPos += 7;
         });
-
-        const stats = Object.entries(subjectMap).map(([subject, data]) => ({
-          subject,
-          avgAccuracy: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
-          quizzesTaken: data.total,
-          icon: SUBJECT_ICONS[subject] || '📚'
-        }));
-
-        setSubjectStats(stats);
       }
 
-      setLoading(false);
+      // ─── RECOMMENDATIONS ────────────────────────────────────────────────
+      yPos += 10;
+      if (yPos > 260) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Recommendations', 20, yPos);
+
+      yPos += 10;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+
+      // Find weakest subject
+      const sortedSubjects = Object.entries(subjectStats || {})
+        .sort((a, b) => (a[1].total / a[1].count) - (b[1].total / b[1].count));
+      
+      const weakestSubject = sortedSubjects[0];
+      const strongestSubject = sortedSubjects[sortedSubjects.length - 1];
+
+      const recommendations = [
+        `Focus on ${weakestSubject[0]} - practice 15-20 minutes daily to improve`,
+        `Maintain current ${strongestSubject[0]} performance with regular review`,
+        `Current ${scholar.streak || 0}-day streak is ${scholar.streak >= 7 ? 'excellent' : 'building'} - aim for 30 days`,
+        `Complete daily quests for bonus XP and streak shields`,
+        avgAccuracy >= 90 
+          ? 'Excellent work! Consider exploring more challenging topics'
+          : 'Target 90% accuracy for mastery - review incorrect answers',
+        `XP Progress: ${levelInfo.progressPct}% toward Level ${levelInfo.next?.level || 'Max'}`,
+      ];
+
+      recommendations.forEach((rec, i) => {
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+        doc.text(`• ${rec}`, 20, yPos, { maxWidth: 170 });
+        yPos += 10;
+      });
+
+      // ─── FOOTER ─────────────────────────────────────────────────────────
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(150);
+        doc.text(
+          `LaunchPard Progress Report - Page ${i} of ${pageCount} - Generated ${new Date().toLocaleDateString()}`,
+          105,
+          290,
+          { align: 'center' }
+        );
+      }
+
+      // Save PDF
+      const filename = `LaunchPard_Report_${scholar.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(filename);
+
     } catch (error) {
-      console.error('Error fetching analytics:', error);
-      setLoading(false);
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 font-bold">Loading analytics...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!scholar) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <p className="text-xl font-bold text-slate-700 mb-4">No scholar data found</p>
-          <Link
-            href="/dashboard/parent"
-            className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-indigo-700 transition-colors"
-          >
-            <ArrowLeftIcon size={20} />
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const currInfo = CURRICULA[scholar.curriculum] || CURRICULA.uk_11plus;
-  const yearLevel = scholar.year_level || scholar.year || 5;
-
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
-      
-      {/* Navigation */}
-      <nav className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white">
-              <RocketIcon size={20} />
-            </div>
-            <div>
-              <h1 className="font-black text-lg text-slate-900">Analytics</h1>
-              <p className="text-xs text-slate-500">{scholar.name}'s Progress</p>
-            </div>
-          </div>
-          <Link
-            href="/dashboard/parent"
-            className="flex items-center gap-2 text-slate-600 hover:text-indigo-600 font-bold transition-colors"
-          >
-            <ArrowLeftIcon size={18} />
-            <span className="hidden sm:inline">Back to Dashboard</span>
-          </Link>
-        </div>
-      </nav>
-
-      <main className="max-w-6xl mx-auto px-6 pt-8 space-y-6">
-        
-        {/* Scholar Info Card */}
-        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-6 text-white">
-          <h2 className="text-2xl font-black mb-2">{scholar.name}</h2>
-          <div className="flex flex-wrap gap-2">
-            <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">
-              {currInfo.country} {currInfo.name}
-            </span>
-            <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">
-              {formatGradeLabel(yearLevel, scholar.curriculum)}
-            </span>
-            <span className="bg-amber-400 text-amber-900 px-3 py-1 rounded-full text-sm font-black">
-              ⭐ {scholar.total_xp || 0} XP
-            </span>
-          </div>
-        </div>
-
-        {/* No Data State */}
-        {results.length === 0 && (
-          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200">
-            <p className="text-5xl mb-4">📊</p>
-            <p className="text-xl font-black text-slate-700 mb-2">No Quiz Data Yet</p>
-            <p className="text-slate-500">
-              {scholar.name} hasn't completed any quizzes yet. Check back after they complete their first quiz!
-            </p>
-          </div>
-        )}
-
-        {/* Stats Grid */}
-        {results.length > 0 && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-2xl p-6 border border-slate-200">
-                <p className="text-sm font-black text-slate-500 uppercase tracking-wider mb-2">
-                  Total Quizzes
-                </p>
-                <p className="text-4xl font-black text-indigo-600">{results.length}</p>
-              </div>
-              
-              <div className="bg-white rounded-2xl p-6 border border-slate-200">
-                <p className="text-sm font-black text-slate-500 uppercase tracking-wider mb-2">
-                  Average Score
-                </p>
-                <p className="text-4xl font-black text-emerald-600">
-                  {Math.round(
-                    results.reduce((sum, r) => sum + (r.score / r.total_questions) * 100, 0) / results.length
-                  )}%
-                </p>
-              </div>
-              
-              <div className="bg-white rounded-2xl p-6 border border-slate-200">
-                <p className="text-sm font-black text-slate-500 uppercase tracking-wider mb-2">
-                  Subjects Practiced
-                </p>
-                <p className="text-4xl font-black text-violet-600">{subjectStats.length}</p>
-              </div>
-            </div>
-
-            {/* Accuracy Chart */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200">
-              <h3 className="text-lg font-black text-slate-700 mb-4">Accuracy Over Time</h3>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorAccuracy" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0"/>
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      domain={[0, 100]}
-                      tick={{ fill: '#64748b', fontSize: 12, fontWeight: 700 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: '12px',
-                        border: 'none',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        fontWeight: 700
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="accuracy"
-                      stroke="#6366f1"
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill="url(#colorAccuracy)"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Subject Breakdown */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200">
-              <h3 className="text-lg font-black text-slate-700 mb-4">Performance by Subject</h3>
-              <div className="space-y-4">
-                {subjectStats.map(stat => (
-                  <div key={stat.subject} className="flex items-center gap-4">
-                    <span className="text-3xl">{stat.icon}</span>
-                    <div className="flex-1">
-                      <div className="flex justify-between mb-1">
-                        <span className="font-bold text-slate-700 capitalize">{stat.subject}</span>
-                        <span className="font-black text-indigo-600">{stat.avgAccuracy}%</span>
-                      </div>
-                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 rounded-full transition-all"
-                          style={{ width: `${stat.avgAccuracy}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">{stat.quizzesTaken} quizzes completed</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </main>
-    </div>
+    <button
+      onClick={generatePDF}
+      disabled={exporting || !results || results.length === 0}
+      className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-black hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <DownloadIcon size={20} />
+      {exporting ? 'Generating PDF...' : 'Export PDF Report'}
+    </button>
   );
 }

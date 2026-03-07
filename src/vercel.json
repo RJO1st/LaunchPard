@@ -7,6 +7,14 @@
     {
       "path": "/api/quests/assign-weekly",
       "schedule": "0 0 * * 1"
+    },    
+    {
+      "path": "/api/cron/trial-reminders",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-reports",
+      "schedule": "0 18 * * 0"
     }
   ]
 }

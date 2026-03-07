@@ -46,6 +46,17 @@ const SUBJECT_META = {
   science:   { emoji: "🔬", label: "Science",   color: "bg-green-100 text-green-700"    },
   geography: { emoji: "🌍", label: "Geography", color: "bg-amber-100 text-amber-700"    },
   history:   { emoji: "📜", label: "History",   color: "bg-rose-100 text-rose-700"      },
+  physics:   { emoji: "⚛️", label: "Physics",   color: "bg-sky-100 text-sky-700"        },
+  chemistry: { emoji: "🧪", label: "Chemistry", color: "bg-lime-100 text-lime-700"      },
+  biology:   { emoji: "🧬", label: "Biology",   color: "bg-green-100 text-green-700"    },
+  commerce:  { emoji: "💰", label: "Commerce",  color: "bg-amber-100 text-amber-700"    },
+  basic_technology: { emoji: "🔧", label: "Basic Tech", color: "bg-stone-100 text-stone-700" },
+  financial_accounting: { emoji: "📊", label: "Financial Accounting", color: "bg-emerald-100 text-emerald-700" },
+  further_mathematics: { emoji: "📐", label: "Further Maths", color: "bg-indigo-100 text-indigo-700" },
+  economics: { emoji: "📈", label: "Economics", color: "bg-teal-100 text-teal-700" },
+  government: { emoji: "🏛️", label: "Government", color: "bg-blue-100 text-blue-700" },
+  business_studies: { emoji: "💼", label: "Business Studies", color: "bg-purple-100 text-purple-700" },
+  basic_science: { emoji: "🧪", label: "Basic Science", color: "bg-lime-100 text-lime-700" },
 };
 
 const TABS         = ["Overview", "Skills", "Study Time", "Goals"];

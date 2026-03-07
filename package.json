@@ -13,6 +13,7 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "dotenv": "^17.3.1",
+    "lucide-react": "^0.577.0",
     "next": "latest",
     "qrcode": "^1.5.4",
     "react": "latest",

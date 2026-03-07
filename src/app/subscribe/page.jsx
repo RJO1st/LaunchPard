@@ -4,14 +4,38 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
+// ─── CUSTOM SVG LOGO ─────────────────────────────────────────────────────────
+const LogoIcon = ({ className = "w-8 h-8" }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+    <path d="M55 20A32 32 0 1 0 75 75" stroke="url(#logo-grad)" strokeWidth="12" strokeLinecap="round"/>
+    <circle cx="18" cy="45" r="2.5" fill="#00f2fe"/>
+    <circle cx="50" cy="85" r="2" fill="#4facfe"/>
+    <path d="M70 55Q75 55 75 50Q75 55 80 55Q75 55 75 60Q75 55 70 55Z" fill="#00f2fe"/>
+    <path d="M80 65Q83 65 83 62Q83 65 86 65Q83 65 83 68Q83 65 80 65Z" fill="#4facfe"/>
+    <g transform="rotate(45 50 50) translate(0 -5)">
+      <path d="M35 60L25 75L45 65Z" fill="#e11d48"/>
+      <path d="M65 60L75 75L55 65Z" fill="#e11d48"/>
+      <path d="M42 68L50 85L58 68Z" fill="#fef08a"/>
+      <path d="M45 68L50 80L55 68Z" fill="#f97316"/>
+      <path d="M50 15C65 30 65 60 50 70C35 60 35 30 50 15Z" fill="#1e1b4b" stroke="#0f172a" strokeWidth="4" strokeLinejoin="round"/>
+      <circle cx="50" cy="40" r="6" fill="#0f172a"/>
+    </g>
+    <defs>
+      <linearGradient id="logo-grad" x1="0%" y1="100%" x2="0%" y2="0%">
+        <stop offset="0%" stopColor="#0ea5e9"/>
+        <stop offset="100%" stopColor="#3b82f6"/>
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
 // ═══════════════════════════════════════════════════════════════════════════
 // LAUNCHPARD SUBSCRIBE PAGE - SPACE EXPLORATION THEME
-// Bold, playful, memorable design inspired by retro space travel posters
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function SubscribePage() {
   const router = useRouter();
-  const [billingCycle, setBillingCycle] = useState("annual"); // 'monthly' or 'annual'
+  const [billingCycle, setBillingCycle] = useState("annual");
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -20,18 +44,15 @@ export default function SubscribePage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
-  // ── Deterministic pseudo‑random generator (for stars) ─────────────────
   const pseudoRandom = (seed, salt = 0) => {
     const x = Math.sin(seed * 12.9898 + salt * 78.233) * 43758.5453;
     return x - Math.floor(x);
   };
 
-  // ── Check authentication on mount ─────────────────────────────────────
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        // Redirect to login page (you'll need to create /login)
         router.push("/login?redirectTo=/subscribe");
       } else {
         setCheckingAuth(false);
@@ -40,42 +61,14 @@ export default function SubscribePage() {
     checkAuth();
   }, [router, supabase]);
 
-  // ── Handle checkout (test mode) ───────────────────────────────────────
-  const handleCheckout = async (priceId) => {
+  const handleCheckout = async () => {
   setLoading(true);
-  try {
-    // For testing, use a fixed test user ID and email
-    // Replace with a valid UUID from your Supabase auth.users table
-    const testUserId = "00000000-0000-0000-0000-000000000001"; // Example UUID
-    const testUserEmail = "test@example.com";
-
-    const res = await fetch("/api/test/activate-subscription", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-test-user-id": testUserId,
-        "x-test-user-email": testUserEmail,
-      },
-      body: JSON.stringify({
-        billing_cycle: priceId.includes("annual") ? "annual" : "monthly"
-      })
-    });
-
-    const { success } = await res.json();
-    if (success) {
-      window.location.href = "/dashboard/parent?success=true";
-    } else {
-      alert("Activation failed");
-    }
-  } catch (error) {
-    console.error("Test activation error:", error);
-    alert("Activation failed. Check console.");
-  } finally {
-    setLoading(false);
-  }
+  // Simulate a successful activation
+  setTimeout(() => {
+    window.location.href = "/dashboard/parent?success=true";
+  }, 1000);
 };
 
-  // Show a loading spinner while checking authentication
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-[#0a0e27] flex items-center justify-center">
@@ -86,8 +79,7 @@ export default function SubscribePage() {
 
   return (
     <div className="min-h-screen bg-[#0a0e27] text-white font-sans overflow-hidden relative">
-      
-      {/* Animated Background - Stars (deterministic) */}
+      {/* Stars background */}
       <div className="fixed inset-0 z-0">
         {[...Array(100)].map((_, i) => {
           const left = (pseudoRandom(i, 1) * 100).toFixed(3);
@@ -109,24 +101,23 @@ export default function SubscribePage() {
         })}
       </div>
 
-      {/* Gradient Orbs */}
+      {/* Gradient orbs */}
       <div className="fixed top-0 left-1/4 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-3xl animate-float" />
       <div className="fixed bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-3xl animate-float-delayed" />
 
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        
         {/* Header */}
         <div className="text-center mb-16 animate-fade-in-up">
           <div className="inline-block mb-6">
             <div className="relative">
-              <div className="text-6xl sm:text-7xl font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-shimmer">
-                🚀 LaunchPard
+              <div className="flex items-center justify-center gap-3 text-6xl sm:text-7xl font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-shimmer">
+                <LogoIcon className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0" />
+                LaunchPard
               </div>
               <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-30 blur-2xl -z-10" />
             </div>
           </div>
-          
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black mb-6 leading-tight">
             Mission: Transform Your
             <br />
@@ -134,12 +125,9 @@ export default function SubscribePage() {
               Child's Learning
             </span>
           </h1>
-          
           <p className="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto font-medium mb-8">
             AI-powered education across 6 global curricula. One platform, unlimited potential.
           </p>
-
-          {/* Trust Badges */}
           <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-400">
             <div className="flex items-center gap-2">
               <span className="text-yellow-400">⭐⭐⭐⭐⭐</span>
@@ -188,27 +176,19 @@ export default function SubscribePage() {
         {/* Pricing Card */}
         <div className="max-w-2xl mx-auto mb-16 animate-fade-in-up animation-delay-400">
           <div className="relative group">
-            {/* Glow effect */}
             <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
-            
-            {/* Card */}
             <div className="relative bg-slate-900/90 backdrop-blur-xl rounded-3xl border border-slate-700 overflow-hidden">
-              {/* Popular badge */}
               <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-black px-6 py-2 rounded-bl-2xl">
                 🔥 MOST POPULAR
               </div>
-
               <div className="p-8 sm:p-12">
-                {/* Plan name */}
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="text-4xl">🚀</div>
+                  <LogoIcon className="w-10 h-10 flex-shrink-0" />
                   <div>
                     <h3 className="text-3xl font-black text-white">LaunchPard Pro</h3>
                     <p className="text-slate-400 text-sm">Everything included</p>
                   </div>
                 </div>
-
-                {/* Price */}
                 <div className="mb-8">
                   {billingCycle === "monthly" ? (
                     <>
@@ -237,10 +217,8 @@ export default function SubscribePage() {
                     </>
                   )}
                 </div>
-
-                {/* CTA Button */}
                 <button
-                  onClick={() => handleCheckout(billingCycle === "monthly" ? "price_monthly_1299" : "price_annual_120")}
+                  onClick={handleCheckout}
                   disabled={loading}
                   className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white font-black text-lg py-5 rounded-2xl shadow-2xl shadow-purple-500/50 transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group mb-4"
                 >
@@ -249,12 +227,9 @@ export default function SubscribePage() {
                   </span>
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform" />
                 </button>
-
                 <p className="text-center text-xs text-slate-400 mb-8">
                   No credit card required • Cancel anytime
                 </p>
-
-                {/* Features */}
                 <div className="space-y-4">
                   {[
                     { icon: "✨", text: "Unlimited questions & mock tests", color: "from-yellow-400 to-orange-500" },
@@ -281,10 +256,7 @@ export default function SubscribePage() {
 
         {/* Comparison Section */}
         <div className="max-w-5xl mx-auto mb-16 animate-fade-in-up animation-delay-600">
-          <h2 className="text-3xl font-black text-center mb-8">
-            Why LaunchPard?
-          </h2>
-          
+          <h2 className="text-3xl font-black text-center mb-8">Why LaunchPard?</h2>
           <div className="bg-slate-800/30 backdrop-blur-xl rounded-3xl border border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -327,7 +299,6 @@ export default function SubscribePage() {
         {/* FAQ Section */}
         <div className="max-w-3xl mx-auto animate-fade-in-up animation-delay-800">
           <h2 className="text-3xl font-black text-center mb-12">Frequently Asked Questions</h2>
-          
           <div className="space-y-4">
             {[
               {
@@ -367,7 +338,7 @@ export default function SubscribePage() {
         {/* Final CTA */}
         <div className="text-center mt-16 animate-fade-in-up animation-delay-1000">
           <button
-            onClick={() => handleCheckout(billingCycle === "monthly" ? "price_monthly_1299" : "price_annual_120")}
+            onClick={handleCheckout}
             disabled={loading}
             className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-black text-xl px-12 py-6 rounded-2xl shadow-2xl shadow-cyan-500/50 transform hover:scale-105 transition-all disabled:opacity-50"
           >
@@ -377,7 +348,7 @@ export default function SubscribePage() {
         </div>
       </div>
 
-      {/* Custom Styles */}
+      {/* Styles */}
       <style jsx>{`
         @keyframes twinkle {
           0%, 100% { opacity: 0.3; }

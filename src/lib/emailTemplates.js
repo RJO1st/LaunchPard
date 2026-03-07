@@ -1,469 +1,231 @@
-// ═══════════════════════════════════════════════════════════════════════════
-// BREVO EMAIL AUTOMATION - Complete Implementation
-// ═══════════════════════════════════════════════════════════════════════════
-// File: src/lib/emailTemplates.js
-// All email templates for LaunchPard
-// ═══════════════════════════════════════════════════════════════════════════
+// lib/emailTemplates.js
+// Deploy to: src/lib/emailTemplates.js
+//
+// All LaunchPard transactional email templates.
+// Returns { subject, htmlContent } — pass directly to sendEmail().
 
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://launchpard.com';
+
+// ── Shared styles ─────────────────────────────────────────────────────────────
+const css = `
+  body { margin:0; padding:0; font-family: 'Helvetica Neue', Arial, sans-serif; background:#f1f5f9; }
+  .wrap { max-width:560px; margin:0 auto; background:#ffffff; border-radius:20px; overflow:hidden; }
+  .header { background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%); padding:40px 32px 32px; text-align:center; }
+  .header h1 { margin:0 0 4px; color:#ffffff; font-size:26px; font-weight:900; letter-spacing:-0.5px; }
+  .header p  { margin:0; color:#c7d2fe; font-size:14px; font-weight:600; }
+  .body { padding:32px; }
+  .body p { color:#374151; font-size:15px; line-height:1.7; margin:0 0 16px; }
+  .stat-row { display:flex; gap:12px; margin:20px 0; }
+  .stat { flex:1; background:#f8fafc; border:2px solid #e2e8f0; border-radius:14px; padding:16px; text-align:center; }
+  .stat .num { font-size:28px; font-weight:900; color:#4f46e5; }
+  .stat .label { font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em; margin-top:2px; }
+  .cta { display:block; background:#4f46e5; color:#ffffff !important; text-decoration:none;
+         font-weight:900; font-size:15px; text-align:center; padding:16px 24px;
+         border-radius:14px; margin:24px 0; }
+  .code { background:#f1f5f9; border:2px solid #e2e8f0; border-radius:10px; padding:14px 20px;
+          font-family:monospace; font-size:22px; font-weight:900; letter-spacing:4px;
+          color:#1e293b; text-align:center; margin:20px 0; }
+  .tip  { background:#eff6ff; border-left:4px solid #4f46e5; border-radius:0 10px 10px 0;
+          padding:14px 16px; margin:20px 0; }
+  .tip p { margin:0; font-size:13px; color:#1e40af; font-weight:600; }
+  .footer { background:#f8fafc; padding:24px 32px; text-align:center; }
+  .footer p { margin:0; font-size:12px; color:#94a3b8; }
+  .footer a { color:#6366f1; text-decoration:none; font-weight:700; }
+`;
+
+function shell(headerTitle, headerSub, bodyHtml) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${headerTitle}</title>
+<style>${css}</style>
+</head>
+<body>
+<div style="padding:24px 16px;">
+<div class="wrap">
+  <div class="header">
+    <h1>🚀 ${headerTitle}</h1>
+    <p>${headerSub}</p>
+  </div>
+  <div class="body">
+    ${bodyHtml}
+  </div>
+  <div class="footer">
+    <p>LaunchPard · AI-powered learning for every scholar<br>
+    <a href="${BASE_URL}">launchpard.com</a> ·
+    <a href="mailto:support@launchpard.com">support@launchpard.com</a></p>
+  </div>
+</div>
+</div>
+</body>
+</html>`;
+}
+
+// ── Curriculum display name helper ────────────────────────────────────────────
+function curriculumLabel(curriculum) {
+  const map = {
+    uk_11plus:        'UK 11+ (GL / CEM)',
+    uk_national:      'UK National Curriculum',
+    us_common_core:   'US Common Core',
+    australian:       'Australian National Curriculum',
+    ib_pyp:           'IB Primary Years (PYP)',
+    ib_myp:           'IB Middle Years (MYP)',
+    nigerian_primary: 'Nigerian Primary (NERDC)',
+    nigerian_jss:     'Nigerian JSS (BECE)',
+    waec:             'WAEC / NECO (SSS)',
+  };
+  return map[curriculum] ?? curriculum ?? 'Standard';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export const EMAIL_TEMPLATES = {
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 1. WELCOME EMAIL (Immediate after signup)
-  // ═══════════════════════════════════════════════════════════════════════════
-  welcome: (parentName, trialEndDate) => ({
-    subject: '🚀 Welcome to LaunchPard - Your 7-Day Free Trial Starts Now!',
-    htmlContent: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px 20px; text-align: center; border-radius: 12px; }
-          .header h1 { color: white; margin: 0; font-size: 28px; }
-          .content { background: white; padding: 30px; border-radius: 12px; margin-top: 20px; }
-          .button { display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px 0; }
-          .checklist { background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .checklist-item { margin: 12px 0; padding-left: 30px; position: relative; }
-          .checklist-item:before { content: '✅'; position: absolute; left: 0; }
-          .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0; }
-          .stat-box { background: #f1f5f9; padding: 15px; border-radius: 8px; text-align: center; }
-          .stat-number { font-size: 24px; font-weight: bold; color: #6366f1; }
-          .footer { text-align: center; color: #64748b; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🚀 Welcome to LaunchPard!</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Your 7-Day Free Trial Starts Now</p>
-          </div>
-          
-          <div class="content">
-            <p>Hi ${parentName},</p>
-            
-            <p>Welcome to LaunchPard! 🎉 Your free trial is now active and ready to transform your child's learning journey.</p>
-            
-            <div class="checklist">
-              <h3 style="margin-top: 0;">Quick Start Guide:</h3>
-              <div class="checklist-item">
-                <strong>Create Your First Scholar</strong><br>
-                Go to your dashboard and add your child
-              </div>
-              <div class="checklist-item">
-                <strong>Choose Their Curriculum</strong><br>
-                We support 10 international curricula including WAEC Nigeria
-              </div>
-              <div class="checklist-item">
-                <strong>Get Their QUEST Code</strong><br>
-                Share this unique code with your child to login
-              </div>
-              <div class="checklist-item">
-                <strong>Watch Them Learn</strong><br>
-                Track progress in real-time with detailed analytics
-              </div>
-            </div>
-            
-            <div class="stats">
-              <div class="stat-box">
-                <div class="stat-number">10,000+</div>
-                <div>Questions</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-number">10</div>
-                <div>Curricula</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-number">100%</div>
-                <div>Gamified</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-number">24/7</div>
-                <div>Access</div>
-              </div>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://launchpard.com/dashboard/parent" class="button">Go to Dashboard →</a>
-            </div>
-            
-            <p><strong>What's Included:</strong></p>
-            <ul>
-              <li>✨ Unlimited quiz access across all subjects</li>
-              <li>📊 Real-time progress analytics</li>
-              <li>🏆 Gamification with badges, streaks & XP</li>
-              <li>🎯 Curriculum-aligned content (WAEC, 11+, IB, etc.)</li>
-              <li>⚛️ Physics, Chemistry, Biology for SSS students</li>
-            </ul>
-            
-            <p style="background: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b;">
-              <strong>⏰ Your trial ends: ${trialEndDate}</strong><br>
-              No credit card required!
-            </p>
-            
-            <p>Questions? Just reply to this email - we're here to help!</p>
-            
-            <p>Best,<br>
-            <strong>The LaunchPard Team</strong></p>
-          </div>
-          
-          <div class="footer">
-            <p>LaunchPard - Making Learning an Adventure</p>
-            <p><a href="https://launchpard.com" style="color: #6366f1;">launchpard.com</a></p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 2. FIRST SCHOLAR CREATED (Triggered when scholar is created)
-  // ═══════════════════════════════════════════════════════════════════════════
-  scholarCreated: (parentName, scholarName, questCode, curriculum, yearLevel) => ({
-    subject: `🎓 ${scholarName}'s Learning Journey Begins!`,
-    htmlContent: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .hero { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 20px; text-align: center; border-radius: 12px; color: white; }
-          .content { background: white; padding: 30px; border-radius: 12px; margin-top: 20px; }
-          .quest-code-box { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 30px; border-radius: 12px; text-align: center; margin: 20px 0; }
-          .quest-code { font-size: 32px; font-weight: bold; letter-spacing: 4px; font-family: 'Courier New', monospace; }
-          .button { display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 10px 0; }
-          .tip-box { background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; border-radius: 8px; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="hero">
-            <h1>🎓 Scholar Created!</h1>
-            <p style="font-size: 20px; margin: 10px 0 0 0;">${scholarName} is ready to start learning</p>
-          </div>
-          
-          <div class="content">
-            <p>Hi ${parentName},</p>
-            
-            <p>Great news! You've successfully created a scholar profile for <strong>${scholarName}</strong>.</p>
-            
-            <p><strong>📋 Scholar Details:</strong></p>
-            <ul>
-              <li>Name: ${scholarName}</li>
-              <li>Curriculum: ${curriculum}</li>
-              <li>Year Level: ${yearLevel}</li>
-            </ul>
-            
-            <div class="quest-code-box">
-              <p style="margin: 0 0 10px 0; font-size: 14px; opacity: 0.9;">QUEST ACCESS CODE</p>
-              <div class="quest-code">${questCode}</div>
-              <p style="margin: 15px 0 0 0; font-size: 14px; opacity: 0.9;">Share this code with ${scholarName} to login</p>
-            </div>
-            
-            <div class="tip-box">
-              <p style="margin: 0;"><strong>💡 Next Steps:</strong></p>
-              <ol style="margin: 10px 0 0 0; padding-left: 20px;">
-                <li>Share the QUEST code above with ${scholarName}</li>
-                <li>Help them visit: <strong>launchpard.com/login?type=scholar</strong></li>
-                <li>They enter the code and start their first quiz!</li>
-              </ol>
-            </div>
-            
-            <p><strong>🎯 What ${scholarName} Gets:</strong></p>
-            <ul>
-              <li>Personalized dashboard with their subjects</li>
-              <li>Curriculum-aligned quizzes</li>
-              <li>XP points and badge collection</li>
-              <li>Learning streak challenges</li>
-              <li>Leaderboard competition with peers</li>
-            </ul>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://launchpard.com/dashboard/parent" class="button">View Dashboard →</a>
-            </div>
-            
-            <p>Questions? Reply to this email anytime!</p>
-            
-            <p>Best,<br>
-            <strong>The LaunchPard Team</strong></p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
+  // ── Welcome email (sent on sign-up) ────────────────────────────────────────
+  welcome(parentName) {
+    const body = `
+      <p>Hi ${parentName ?? 'there'},</p>
+      <p>Welcome to <strong>LaunchPard</strong> — your scholars' mission control for smarter learning. 🎉</p>
+      <p>Your <strong>7-day free trial</strong> has started. Here's what to do next:</p>
+      <ol style="color:#374151;font-size:15px;line-height:2;">
+        <li>Add up to <strong>3 scholars</strong> from your parent dashboard</li>
+        <li>Choose their curriculum &amp; year group</li>
+        <li>Watch them blast off! 🚀</li>
+      </ol>
+      <a href="${BASE_URL}/dashboard/parent" class="cta">Go to Mission Control →</a>
+      <div class="tip"><p>💡 Tip: Each scholar gets a unique Quest Code they can use to log in on any device.</p></div>
+      <p style="font-size:13px;color:#94a3b8;">Questions? Reply to this email or visit our help centre.</p>
+    `;
+    return {
+      subject: '🚀 Welcome to LaunchPard – your free trial is live!',
+      htmlContent: shell('Welcome aboard!', 'Your learning mission starts now', body),
+    };
+  },
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 3. FIRST QUIZ COMPLETED
-  // ═══════════════════════════════════════════════════════════════════════════
-  firstQuiz: (parentName, scholarName, subject, score, totalQuestions, xpEarned) => ({
-    subject: `🎉 ${scholarName} Just Completed Their First Quiz!`,
-    htmlContent: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .hero { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 20px; text-align: center; border-radius: 12px; color: white; }
-          .content { background: white; padding: 30px; border-radius: 12px; margin-top: 20px; }
-          .results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
-          .result-card { background: #f8fafc; padding: 20px; border-radius: 8px; text-align: center; }
-          .result-number { font-size: 28px; font-weight: bold; color: #6366f1; }
-          .button { display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="hero">
-            <h1>🎉 First Quiz Complete!</h1>
-            <p style="font-size: 18px; margin: 10px 0 0 0;">Achievement Unlocked: "First Steps"</p>
-          </div>
-          
-          <div class="content">
-            <p>Hi ${parentName},</p>
-            
-            <p>Fantastic news! <strong>${scholarName}</strong> just completed their first quiz! 🎊</p>
-            
-            <div class="results-grid">
-              <div class="result-card">
-                <div class="result-number">${subject}</div>
-                <div style="font-size: 14px; color: #64748b;">Subject</div>
-              </div>
-              <div class="result-card">
-                <div class="result-number">${score}/${totalQuestions}</div>
-                <div style="font-size: 14px; color: #64748b;">Score</div>
-              </div>
-              <div class="result-card">
-                <div class="result-number">+${xpEarned} XP</div>
-                <div style="font-size: 14px; color: #64748b;">Earned</div>
-              </div>
-            </div>
-            
-            <p style="background: #fef3c7; padding: 15px; border-radius: 8px; text-align: center; font-size: 18px;">
-              📊 Accuracy: <strong>${Math.round((score / totalQuestions) * 100)}%</strong>
-            </p>
-            
-            <p><strong>🏆 Badge Earned:</strong> "First Steps" - Complete your first quiz</p>
-            
-            <p>This is just the beginning! Encourage ${scholarName} to:</p>
-            <ul>
-              <li>Try different subjects to unlock more badges</li>
-              <li>Build a daily learning streak</li>
-              <li>Compete on the leaderboard</li>
-            </ul>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://launchpard.com/dashboard/parent/analytics" class="button">View Full Report →</a>
-            </div>
-            
-            <p>Keep up the great work!</p>
-            
-            <p>Best,<br>
-            <strong>The LaunchPard Team</strong></p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
+  // ── Scholar created (sent when parent adds a new scholar) ──────────────────
+  scholarCreated(parentName, scholarName, questCode, curriculum, yearLevel) {
+    const body = `
+      <p>Hi ${parentName ?? 'there'},</p>
+      <p>You've successfully added <strong>${scholarName}</strong> as a LaunchPard scholar. They're ready to launch! 🛸</p>
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 4. TRIAL ENDING (Day before trial ends)
-  // ═══════════════════════════════════════════════════════════════════════════
-  trialEnding: (parentName, scholarName, quizzesCompleted, xpEarned, badgesEarned, avgAccuracy) => ({
-    subject: '⏰ Your LaunchPard Trial Ends Tomorrow',
-    htmlContent: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .hero { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 40px 20px; text-align: center; border-radius: 12px; color: white; }
-          .content { background: white; padding: 30px; border-radius: 12px; margin-top: 20px; }
-          .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0; }
-          .stat-card { background: #f8fafc; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #e2e8f0; }
-          .stat-number { font-size: 32px; font-weight: bold; color: #6366f1; }
-          .warning-box { background: #fef2f2; border: 2px solid #ef4444; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .pricing-box { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 30px; border-radius: 12px; margin: 20px 0; }
-          .button { display: inline-block; background: #10b981; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 18px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="hero">
-            <h1>⏰ Trial Ending Tomorrow</h1>
-            <p style="font-size: 18px; margin: 10px 0 0 0;">Don't lose ${scholarName}'s progress!</p>
-          </div>
-          
-          <div class="content">
-            <p>Hi ${parentName},</p>
-            
-            <p>Your 7-day trial ends tomorrow. Here's what <strong>${scholarName}</strong> achieved:</p>
-            
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-number">${quizzesCompleted}</div>
-                <div>Quizzes Completed</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number">${xpEarned}</div>
-                <div>XP Earned</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number">${badgesEarned}</div>
-                <div>Badges Unlocked</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-number">${avgAccuracy}%</div>
-                <div>Avg Accuracy</div>
-              </div>
-            </div>
-            
-            <div class="warning-box">
-              <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold; color: #dc2626;">🚨 What Happens After Trial:</p>
-              <ul style="margin: 0; padding-left: 20px;">
-                <li>❌ Quiz access locked</li>
-                <li>❌ Progress tracking disabled</li>
-                <li>❌ Badge collection stopped</li>
-                <li>❌ Leaderboard removed</li>
-              </ul>
-            </div>
-            
-            <div class="pricing-box">
-              <h2 style="margin: 0 0 20px 0; text-align: center;">Keep the Momentum Going!</h2>
-              
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 20px 0;">
-                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; text-align: center;">
-                  <div style="font-size: 14px; opacity: 0.9;">Monthly</div>
-                  <div style="font-size: 36px; font-weight: bold; margin: 10px 0;">£12.99</div>
-                  <div style="font-size: 14px; opacity: 0.9;">/month</div>
-                </div>
-                <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 8px; text-align: center; border: 2px solid white;">
-                  <div style="font-size: 14px; opacity: 0.9;">Annual</div>
-                  <div style="font-size: 36px; font-weight: bold; margin: 10px 0;">£120</div>
-                  <div style="font-size: 14px; opacity: 0.9;">/year (save £35!)</div>
-                </div>
-              </div>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://launchpard.com/subscribe" class="button">Subscribe Now →</a>
-            </div>
-            
-            <p style="text-align: center; color: #64748b; font-size: 14px;">
-              Questions? Reply to this email - we're here to help!
-            </p>
-            
-            <p>Best,<br>
-            <strong>The LaunchPard Team</strong></p>
-          </div>
+      <div class="stat-row">
+        <div class="stat">
+          <div class="num">${yearLevel ?? '—'}</div>
+          <div class="label">Year Group</div>
         </div>
-      </body>
-      </html>
-    `
-  }),
+        <div class="stat">
+          <div class="num" style="font-size:14px;padding-top:6px;">${curriculumLabel(curriculum)}</div>
+          <div class="label">Curriculum</div>
+        </div>
+      </div>
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 5. WEEKLY PROGRESS REPORT (Every Sunday)
-  // ═══════════════════════════════════════════════════════════════════════════
-  weeklyReport: (parentName, scholarName, weekData) => ({
-    subject: `📊 ${scholarName}'s Week in Review`,
-    htmlContent: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .hero { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 40px 20px; text-align: center; border-radius: 12px; color: white; }
-          .content { background: white; padding: 30px; border-radius: 12px; margin-top: 20px; }
-          .subject-bar { background: #f1f5f9; padding: 15px; border-radius: 8px; margin: 10px 0; }
-          .progress-bar { background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 8px; }
-          .progress-fill { background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%); height: 100%; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="hero">
-            <h1>📊 Weekly Progress Report</h1>
-            <p style="font-size: 18px; margin: 10px 0 0 0;">${scholarName}'s Learning Journey</p>
-          </div>
-          
-          <div class="content">
-            <p>Hi ${parentName},</p>
-            
-            <p>Here's how <strong>${scholarName}</strong> performed this week:</p>
-            
-            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="margin: 0 0 15px 0;">This Week's Stats</h3>
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
-                <div>
-                  <div style="font-size: 14px; color: #64748b;">Quizzes</div>
-                  <div style="font-size: 24px; font-weight: bold; color: #6366f1;">${weekData.quizzes}</div>
-                </div>
-                <div>
-                  <div style="font-size: 14px; color: #64748b;">XP Earned</div>
-                  <div style="font-size: 24px; font-weight: bold; color: #6366f1;">${weekData.xp}</div>
-                </div>
-                <div>
-                  <div style="font-size: 14px; color: #64748b;">Accuracy</div>
-                  <div style="font-size: 24px; font-weight: bold; color: #10b981;">${weekData.accuracy}%</div>
-                </div>
-                <div>
-                  <div style="font-size: 14px; color: #64748b;">Streak</div>
-                  <div style="font-size: 24px; font-weight: bold; color: #f59e0b;">${weekData.streak} days</div>
-                </div>
-              </div>
-            </div>
-            
-            <h3>📚 Subjects Practiced:</h3>
-            ${weekData.subjects.map(s => `
-              <div class="subject-bar">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span><strong>${s.name}</strong></span>
-                  <span style="color: #6366f1; font-weight: bold;">${s.accuracy}%</span>
-                </div>
-                <div style="font-size: 14px; color: #64748b; margin-top: 4px;">${s.quizzes} quizzes</div>
-                <div class="progress-bar">
-                  <div class="progress-fill" style="width: ${s.accuracy}%"></div>
-                </div>
-              </div>
-            `).join('')}
-            
-            ${weekData.badges.length > 0 ? `
-              <h3>🏆 Badges Earned This Week:</h3>
-              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                ${weekData.badges.map(b => `
-                  <div style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; font-weight: bold;">
-                    ${b.icon} ${b.name}
-                  </div>
-                `).join('')}
-              </div>
-            ` : ''}
-            
-            <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0;"><strong>💡 Insight:</strong> ${weekData.insight}</p>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://launchpard.com/dashboard/parent/analytics" 
-                 style="display: inline-block; background: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">
-                View Full Analytics →
-              </a>
-            </div>
-            
-            <p>Keep up the great work!</p>
-            
-            <p>Best,<br>
-            <strong>The LaunchPard Team</strong></p>
-          </div>
+      <p><strong>${scholarName}'s Quest Code:</strong></p>
+      <div class="code">${questCode ?? '——'}</div>
+
+      <div class="tip">
+        <p>📋 Share this code with ${scholarName} — they'll use it to log in and start quests on any device.</p>
+      </div>
+
+      <a href="${BASE_URL}/dashboard/parent" class="cta">View ${scholarName}'s Dashboard →</a>
+      <p style="font-size:13px;color:#94a3b8;">Keep this code safe. Parents can always find it in Mission Control.</p>
+    `;
+    return {
+      subject: `🛸 ${scholarName} is ready to launch on LaunchPard!`,
+      htmlContent: shell(`${scholarName} has joined the mission!`, 'Scholar profile created', body),
+    };
+  },
+
+  // ── First quiz completed (sent after scholar finishes their first quiz) ─────
+  firstQuiz(parentName, scholarName, subject, score, totalQuestions, xpEarned) {
+    const pct     = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
+    const emoji   = pct >= 80 ? '🌟' : pct >= 60 ? '⭐' : '💫';
+    const message = pct >= 80
+      ? `Outstanding! ${scholarName} is off to a brilliant start.`
+      : pct >= 60
+      ? `Great effort! ${scholarName} is making solid progress.`
+      : `${scholarName} has taken their first step — every mission starts somewhere!`;
+
+    const body = `
+      <p>Hi ${parentName ?? 'there'},</p>
+      <p>${emoji} <strong>${scholarName}</strong> just completed their first LaunchPard quiz in <strong>${subject ?? 'their chosen subject'}</strong>!</p>
+      <p>${message}</p>
+
+      <div class="stat-row">
+        <div class="stat">
+          <div class="num">${score}/${totalQuestions}</div>
+          <div class="label">Score</div>
         </div>
-      </body>
-      </html>
-    `
-  })
+        <div class="stat">
+          <div class="num">${pct}%</div>
+          <div class="label">Accuracy</div>
+        </div>
+        <div class="stat">
+          <div class="num">+${xpEarned ?? score * 10}</div>
+          <div class="label">✨ Stardust</div>
+        </div>
+      </div>
+
+      <a href="${BASE_URL}/dashboard/parent" class="cta">See ${scholarName}'s Full Progress →</a>
+
+      <div class="tip">
+        <p>💡 Regular practice of just 15 minutes a day builds lasting knowledge. Encourage ${scholarName} to complete a quest each evening!</p>
+      </div>
+    `;
+    return {
+      subject: `${emoji} ${scholarName} completed their first LaunchPard quiz!`,
+      htmlContent: shell('First Quest Complete!', `${scholarName} is on the launchpad`, body),
+    };
+  },
+
+  // ── Weekly digest (sent every Sunday to active parents) ────────────────────
+  weeklyDigest(parentName, scholars) {
+    // scholars: [{ name, subject, quizCount, accuracy, xpEarned, streak }]
+    const rows = (scholars ?? []).map(s => `
+      <tr>
+        <td style="padding:10px 12px;font-weight:700;color:#1e293b;">${s.name}</td>
+        <td style="padding:10px 12px;color:#475569;">${s.quizCount ?? 0} quests</td>
+        <td style="padding:10px 12px;color:#475569;">${s.accuracy ?? 0}%</td>
+        <td style="padding:10px 12px;color:#4f46e5;font-weight:900;">+${s.xpEarned ?? 0} ✨</td>
+        <td style="padding:10px 12px;color:#f59e0b;font-weight:700;">${s.streak ?? 0} 🔥</td>
+      </tr>
+    `).join('');
+
+    const body = `
+      <p>Hi ${parentName ?? 'there'},</p>
+      <p>Here's your weekly mission report for the scholars in your command! 🛸</p>
+
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin:20px 0;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:8px 12px;text-align:left;color:#94a3b8;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.08em;">Scholar</th>
+            <th style="padding:8px 12px;text-align:left;color:#94a3b8;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.08em;">Quests</th>
+            <th style="padding:8px 12px;text-align:left;color:#94a3b8;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.08em;">Accuracy</th>
+            <th style="padding:8px 12px;text-align:left;color:#94a3b8;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.08em;">Stardust</th>
+            <th style="padding:8px 12px;text-align:left;color:#94a3b8;font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.08em;">Streak</th>
+          </tr>
+        </thead>
+        <tbody>${rows || '<tr><td colspan="5" style="padding:16px;text-align:center;color:#94a3b8;">No activity this week</td></tr>'}</tbody>
+      </table>
+
+      <a href="${BASE_URL}/dashboard/parent" class="cta">View Full Report in Mission Control →</a>
+      <div class="tip"><p>💡 Scholars who complete at least 3 quests a week improve accuracy by an average of 12% per month.</p></div>
+    `;
+    return {
+      subject: '📊 Your weekly LaunchPard mission report',
+      htmlContent: shell('Weekly Mission Report', 'Here\'s how your scholars performed', body),
+    };
+  },
+
+  // ── Password reset (if using custom auth flow) ─────────────────────────────
+  passwordReset(parentName, resetUrl) {
+    const body = `
+      <p>Hi ${parentName ?? 'there'},</p>
+      <p>We received a request to reset your LaunchPard password. Click the button below to set a new one.</p>
+      <a href="${resetUrl}" class="cta">Reset My Password →</a>
+      <div class="tip"><p>⏰ This link expires in 1 hour. If you didn't request a reset, you can safely ignore this email.</p></div>
+    `;
+    return {
+      subject: '🔑 Reset your LaunchPard password',
+      htmlContent: shell('Password Reset', 'Secure your account', body),
+    };
+  },
 };

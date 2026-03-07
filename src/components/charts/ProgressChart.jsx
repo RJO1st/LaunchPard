@@ -28,6 +28,15 @@ const SUBJECT_LABELS = {
   history:   "History",
 };
 
+const SUBJECT_STROKES = {
+  maths: "#4f46e5",
+  english: "#f43f5e",
+  physics: "#3b82f6",    // Already there!
+  chemistry: "#10b981",  // Already there!
+  biology: "#34d399",    // Already there!
+  // ...
+};
+
 // Custom tooltip
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
