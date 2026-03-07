@@ -1,18 +1,16 @@
+'use client';
 // ═══════════════════════════════════════════════════════════════════════════
 // EMAIL VERIFICATION PAGE
 // File: src/app/verify-email/page.jsx
 // Shows after signup when email confirmation is required
 // ═══════════════════════════════════════════════════════════════════════════
 
-export const dynamic = 'force-dynamic';
-
-'use client';
-
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, CheckCircle } from 'lucide-react';
+import { Mail, CheckCircle, Loader2 } from 'lucide-react';
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
 
@@ -115,5 +113,17 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="text-indigo-500 animate-spin" size={32} />
+      </div>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
