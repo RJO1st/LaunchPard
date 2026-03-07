@@ -4,13 +4,7 @@
 // Unified Brevo transactional email sender.
 // Handles both string and array `to`, and accepts `html` or `htmlContent`.
 
-import * as brevo from '@getbrevo/brevo';
-
-const apiInstance = new brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(
-  brevo.TransactionalEmailsApiApiKeys.apiKey,
-  process.env.BREVO_API_KEY
-);
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 /**
  * sendEmail({ to, subject, html, htmlContent, from })
@@ -41,17 +35,27 @@ export async function sendEmail({
     throw new Error('sendEmail: no html/htmlContent supplied');
   }
 
-  const sendSmtpEmail = new brevo.SendSmtpEmail();
-  sendSmtpEmail.to          = recipients;
-  sendSmtpEmail.sender      = { email: from, name: 'LaunchPard' };
-  sendSmtpEmail.subject     = subject;
-  sendSmtpEmail.htmlContent = body;
-
   try {
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const res = await fetch(BREVO_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
+      },
+      body: JSON.stringify({
+        sender:      { email: from, name: 'LaunchPard' },
+        to:          recipients,
+        subject,
+        htmlContent: body,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message ?? `Brevo error ${res.status}`);
+    }
     console.log(`✅ Email sent → ${recipients.map(r => r.email).join(', ')}`);
   } catch (error) {
-    console.error('❌ Brevo email error:', error?.response?.body ?? error);
+    console.error('❌ Brevo email error:', error);
     throw error;
   }
 }
